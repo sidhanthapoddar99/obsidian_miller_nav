@@ -1,0 +1,30 @@
+{
+  "name": "miller-nav",
+  "version": "0.1.0",
+  "description": "Miller columns navigation for Obsidian with user-defined folder hierarchy",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "miller-columns",
+    "navigation"
+  ],
+  "author": "Sid",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "builtin-modules": "^5.0.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.0.0",
+    "obsidian": "latest",
+    "tslib": "^2.8.0",
+    "typescript": "^5.8.0"
+  }
+}

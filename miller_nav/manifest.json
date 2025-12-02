@@ -1,0 +1,11 @@
+{
+  "id": "miller-nav",
+  "name": "MillerNav",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Miller columns navigation for Obsidian with user-defined folder hierarchy",
+  "author": "Sid",
+  "authorUrl": "https://github.com/sid",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}

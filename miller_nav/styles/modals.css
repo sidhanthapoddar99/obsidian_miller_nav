@@ -1,0 +1,72 @@
+/**
+ * Modal styles
+ */
+
+/* ========== Delete Confirmation Modal ========== */
+.miller-nav-delete-modal {
+  padding: 16px;
+}
+
+.miller-nav-delete-modal h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.miller-nav-delete-list {
+  margin: 0 0 12px 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.miller-nav-delete-list li {
+  margin-bottom: 4px;
+}
+
+.miller-nav-delete-more {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.miller-nav-delete-note {
+  margin: 0 0 16px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.miller-nav-delete-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.miller-nav-delete-buttons button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-delete-buttons button:first-child {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-delete-buttons button:first-child:hover {
+  background: var(--background-modifier-border);
+}
+
+.miller-nav-delete-buttons button.mod-warning {
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent);
+}
+
+.miller-nav-delete-buttons button.mod-warning:hover {
+  opacity: 0.9;
+}

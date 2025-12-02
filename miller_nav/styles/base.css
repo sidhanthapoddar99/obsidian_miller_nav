@@ -1,0 +1,96 @@
+/**
+ * Base styles - Container and layout foundations
+ */
+
+/* ========== Container ========== */
+.miller-nav-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+
+/* ========== Miller Columns Layout ========== */
+.miller-nav-columns {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ========== Scrollbar ========== */
+.miller-nav-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.miller-nav-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* Horizontal scrollbar for columns container */
+.miller-nav-columns::-webkit-scrollbar {
+  height: 6px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* ========== Mobile ========== */
+.miller-nav-mobile .miller-nav-columns {
+  overflow-x: hidden;
+}
+
+.miller-nav-mobile .miller-nav-column {
+  min-width: 100%;
+  max-width: 100%;
+}
+
+.miller-nav-mobile .miller-nav-item {
+  height: 44px;
+  padding: 0 12px;
+}
+
+.miller-nav-mobile .miller-nav-chevron {
+  width: 24px;
+  height: 24px;
+}
+
+.miller-nav-mobile .miller-nav-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+
+.miller-nav-mobile .miller-nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-name {
+  font-size: 15px;
+}

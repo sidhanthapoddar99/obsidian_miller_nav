@@ -1,0 +1,147 @@
+/**
+ * Item styles - Files and folders
+ */
+
+/* ========== Items ========== */
+.miller-nav-item {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  gap: 6px;
+  transition: background 0.1s ease;
+}
+
+.miller-nav-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.miller-nav-item.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* ========== Chevron ========== */
+.miller-nav-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  border-radius: 3px;
+}
+
+.miller-nav-chevron:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.miller-nav-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.miller-nav-chevron-empty {
+  width: 18px;
+}
+
+/* ========== Icon ========== */
+.miller-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.miller-nav-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== Name ========== */
+.miller-nav-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* ========== Count Badge ========== */
+.miller-nav-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* ========== Arrow ========== */
+.miller-nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.miller-nav-arrow svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ========== Subfolder ========== */
+.miller-nav-subfolder {
+  font-weight: 500;
+}
+
+.miller-nav-subfolder .miller-nav-icon {
+  color: var(--interactive-accent);
+}
+
+/* ========== Selected State ========== */
+.miller-nav-item.is-selected .miller-nav-icon,
+.miller-nav-item.is-selected .miller-nav-chevron,
+.miller-nav-item.is-selected .miller-nav-arrow {
+  color: var(--text-on-accent);
+}
+
+.miller-nav-item.is-selected .miller-nav-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-on-accent);
+}
+
+/* ========== Multi-Selection ========== */
+.miller-nav-item.is-multi-selected {
+  background: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.miller-nav-item.is-multi-selected .miller-nav-icon,
+.miller-nav-item.is-multi-selected .miller-nav-chevron,
+.miller-nav-item.is-multi-selected .miller-nav-arrow {
+  color: var(--text-on-accent);
+}
+
+.miller-nav-item.is-multi-selected .miller-nav-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-on-accent);
+}

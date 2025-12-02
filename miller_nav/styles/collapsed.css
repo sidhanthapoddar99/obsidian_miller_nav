@@ -1,0 +1,133 @@
+/**
+ * Collapsed column styles
+ */
+
+/* ========== Collapsed Column ========== */
+.miller-nav-column.is-collapsed {
+  min-width: 36px;
+  max-width: 36px;
+  background: linear-gradient(
+    to bottom,
+    var(--background-secondary) 0%,
+    var(--background-primary-alt) 100%
+  );
+  border-right: 1px solid var(--background-modifier-border);
+  transition: all 0.15s ease;
+}
+
+.miller-nav-column.is-collapsed:hover {
+  background: linear-gradient(
+    to bottom,
+    var(--background-modifier-hover) 0%,
+    var(--background-secondary) 100%
+  );
+}
+
+/* ========== Strip Layout ========== */
+.miller-nav-collapsed-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding: 8px 4px;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* ========== Top Section ========== */
+.miller-nav-collapsed-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  width: 100%;
+}
+
+/* ========== Expand Icon ========== */
+.miller-nav-collapsed-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-faint);
+  transition: all 0.15s ease;
+}
+
+.miller-nav-collapsed-strip:hover .miller-nav-collapsed-icon {
+  color: var(--interactive-accent);
+  transform: translateX(2px);
+}
+
+.miller-nav-collapsed-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ========== Level Badge ========== */
+.miller-nav-collapsed-level {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ========== Folder Icon ========== */
+.miller-nav-collapsed-folder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.miller-nav-collapsed-folder-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== Folder Name ========== */
+.miller-nav-collapsed-name {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-normal);
+  max-height: 120px;
+  letter-spacing: 0.3px;
+}
+
+/* ========== Selected Item ========== */
+.miller-nav-collapsed-selected {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 9px;
+  color: var(--text-muted);
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 0;
+  margin-top: auto;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-modifier-hover);
+  border-radius: 3px;
+  padding: 4px 2px;
+}

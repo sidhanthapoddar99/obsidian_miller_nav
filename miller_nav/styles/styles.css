@@ -1,9 +1,22 @@
 /**
  * MillerNav Styles
  * Clean, minimal navigation UI with Miller columns
+ *
+ * This file is auto-generated from modular CSS files:
+ * - base.css      : Container, layout, mobile, scrollbars
+ * - columns.css   : Column structure, headers, toolbar
+ * - items.css     : File/folder items, selection states
+ * - collapsed.css : Collapsed column strip
+ * - drag-drop.css : Drag and drop visual feedback
+ * - modals.css    : Delete confirmation and other modals
+ * - settings.css  : Settings page tabs and forms
  */
 
-/* ========== Container ========== */
+/* ========================================================================== */
+/* BASE STYLES                                                                */
+/* ========================================================================== */
+
+/* Container */
 .miller-nav-container {
   display: flex;
   flex-direction: column;
@@ -12,7 +25,7 @@
   background: var(--background-secondary);
 }
 
-/* ========== Miller Columns Layout ========== */
+/* Miller Columns Layout */
 .miller-nav-columns {
   display: flex;
   flex-direction: row;
@@ -21,6 +34,86 @@
   overflow-y: hidden;
 }
 
+/* Scrollbar - Vertical */
+.miller-nav-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.miller-nav-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* Scrollbar - Horizontal */
+.miller-nav-columns::-webkit-scrollbar {
+  height: 6px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* Mobile */
+.miller-nav-mobile .miller-nav-columns {
+  overflow-x: hidden;
+}
+
+.miller-nav-mobile .miller-nav-column {
+  min-width: 100%;
+  max-width: 100%;
+}
+
+.miller-nav-mobile .miller-nav-item {
+  height: 44px;
+  padding: 0 12px;
+}
+
+.miller-nav-mobile .miller-nav-chevron {
+  width: 24px;
+  height: 24px;
+}
+
+.miller-nav-mobile .miller-nav-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+
+.miller-nav-mobile .miller-nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-name {
+  font-size: 15px;
+}
+
+/* ========================================================================== */
+/* COLUMN STYLES                                                              */
+/* ========================================================================== */
+
+/* Column */
 .miller-nav-column {
   display: flex;
   flex-direction: column;
@@ -35,13 +128,12 @@
   border-right: none;
 }
 
-/* First column can grow to fill space if alone */
 .miller-nav-column:first-child:last-child {
   max-width: none;
   flex: 1;
 }
 
-/* Column header/toolbar */
+/* Column Header */
 .miller-nav-column-header {
   display: flex;
   align-items: center;
@@ -50,9 +142,9 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-  background: var(--background-primary-alt);
+  background: transparent;
   border-bottom: 1px solid var(--background-modifier-border);
-  min-height: 32px;
+  min-height: 36px;
   flex-shrink: 0;
 }
 
@@ -65,6 +157,7 @@
   letter-spacing: 0.5px;
 }
 
+/* Toolbar */
 .miller-nav-column-toolbar {
   display: flex;
   align-items: center;
@@ -76,8 +169,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 4px;
   cursor: pointer;
   color: var(--text-faint);
@@ -89,13 +182,18 @@
   color: var(--text-normal);
 }
 
-.miller-nav-toolbar-btn svg {
-  width: 14px;
-  height: 14px;
+.miller-nav-toolbar-btn.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
 
-.miller-nav-column-close {
-  color: var(--text-faint);
+.miller-nav-toolbar-btn.is-active:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.miller-nav-toolbar-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .miller-nav-column-close:hover {
@@ -103,7 +201,20 @@
   color: var(--text-on-accent);
 }
 
-/* Empty folder message */
+.miller-nav-shrink-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* List */
+.miller-nav-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+}
+
+/* Empty State */
 .miller-nav-empty {
   padding: 16px;
   text-align: center;
@@ -112,15 +223,49 @@
   font-style: italic;
 }
 
-/* ========== List ========== */
-.miller-nav-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+/* Column Footer */
+.miller-nav-column-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   padding: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+  background: transparent;
+  flex-shrink: 0;
 }
 
-/* ========== Items ========== */
+.miller-nav-footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-footer-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-footer-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.miller-nav-footer-label {
+  font-weight: 500;
+}
+
+/* ========================================================================== */
+/* ITEM STYLES                                                                */
+/* ========================================================================== */
+
+/* Items */
 .miller-nav-item {
   display: flex;
   align-items: center;
@@ -192,7 +337,7 @@
   font-size: 13px;
 }
 
-/* Count badge */
+/* Count Badge */
 .miller-nav-count {
   display: flex;
   align-items: center;
@@ -208,7 +353,7 @@
   flex-shrink: 0;
 }
 
-/* Arrow for subfolders */
+/* Arrow */
 .miller-nav-arrow {
   display: flex;
   align-items: center;
@@ -224,7 +369,7 @@
   height: 12px;
 }
 
-/* Subfolder styling */
+/* Subfolder */
 .miller-nav-subfolder {
   font-weight: 500;
 }
@@ -233,7 +378,7 @@
   color: var(--interactive-accent);
 }
 
-/* Selected state overrides */
+/* Selected State */
 .miller-nav-item.is-selected .miller-nav-icon,
 .miller-nav-item.is-selected .miller-nav-chevron,
 .miller-nav-item.is-selected .miller-nav-arrow {
@@ -245,176 +390,7 @@
   color: var(--text-on-accent);
 }
 
-/* ========== Mobile ========== */
-.miller-nav-mobile .miller-nav-columns {
-  /* On mobile, show only one column at a time */
-  overflow-x: hidden;
-}
-
-.miller-nav-mobile .miller-nav-column {
-  min-width: 100%;
-  max-width: 100%;
-}
-
-.miller-nav-mobile .miller-nav-item {
-  height: 44px;
-  padding: 0 12px;
-}
-
-.miller-nav-mobile .miller-nav-chevron {
-  width: 24px;
-  height: 24px;
-}
-
-.miller-nav-mobile .miller-nav-chevron svg {
-  width: 18px;
-  height: 18px;
-}
-
-.miller-nav-mobile .miller-nav-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.miller-nav-mobile .miller-nav-icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.miller-nav-mobile .miller-nav-name {
-  font-size: 15px;
-}
-
-/* ========== Scrollbar ========== */
-.miller-nav-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.miller-nav-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.miller-nav-list::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-bg);
-  border-radius: 3px;
-}
-
-.miller-nav-list::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-active-thumb-bg);
-}
-
-/* Horizontal scrollbar for columns container */
-.miller-nav-columns::-webkit-scrollbar {
-  height: 6px;
-}
-
-.miller-nav-columns::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.miller-nav-columns::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb-bg);
-  border-radius: 3px;
-}
-
-.miller-nav-columns::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-active-thumb-bg);
-}
-
-/* ========== Settings Page ========== */
-
-/* Settings tabs */
-.miller-nav-settings-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding-bottom: 8px;
-}
-
-.miller-nav-settings-tab {
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 4px 4px 0 0;
-  font-size: 14px;
-  transition: all 0.1s ease;
-}
-
-.miller-nav-settings-tab:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.miller-nav-settings-tab.is-active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
-.miller-nav-settings-content {
-  padding-top: 8px;
-}
-
-.miller-nav-settings-description {
-  color: var(--text-muted);
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.miller-nav-settings-empty {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.miller-nav-settings-folder-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 16px;
-}
-
-.miller-nav-settings-folder-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--background-secondary);
-  border-radius: 4px;
-}
-
-.miller-nav-settings-folder-item.is-invalid {
-  background: rgba(var(--color-red-rgb), 0.1);
-}
-
-.miller-nav-settings-folder-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.miller-nav-settings-folder-path {
-  font-family: var(--font-monospace);
-  font-size: 12px;
-}
-
-.miller-nav-settings-folder-level {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.miller-nav-settings-folder-missing {
-  color: var(--text-error);
-  font-size: 11px;
-}
-
-.miller-nav-settings-folder-remove {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-/* ========== Multi-Selection ========== */
+/* Multi-Selection */
 .miller-nav-item.is-multi-selected {
   background: var(--interactive-accent-hover);
   color: var(--text-on-accent);
@@ -433,36 +409,10 @@
   color: var(--text-on-accent);
 }
 
-/* ========== Drag and Drop ========== */
-.miller-nav-item.is-dragging {
-  opacity: 0.5;
-  background: var(--background-modifier-hover);
-}
+/* ========================================================================== */
+/* COLLAPSED COLUMN STYLES                                                    */
+/* ========================================================================== */
 
-.miller-nav-item.miller-nav-drop-hover {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  outline: 2px dashed var(--interactive-accent);
-  outline-offset: 2px;
-}
-
-.miller-nav-item.miller-nav-drop-hover .miller-nav-icon,
-.miller-nav-item.miller-nav-drop-hover .miller-nav-chevron,
-.miller-nav-item.miller-nav-drop-hover .miller-nav-arrow {
-  color: var(--text-on-accent);
-}
-
-.miller-nav-column.miller-nav-drop-target {
-  background: rgba(var(--interactive-accent-rgb), 0.1);
-  outline: 2px dashed var(--interactive-accent);
-  outline-offset: -2px;
-}
-
-.miller-nav-list.miller-nav-drop-target {
-  background: rgba(var(--interactive-accent-rgb), 0.05);
-}
-
-/* ========== Collapsed Columns ========== */
 .miller-nav-column.is-collapsed {
   min-width: 36px;
   max-width: 36px;
@@ -577,7 +527,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 6px 0;
   margin-top: auto;
   border-top: 1px solid var(--background-modifier-border);
   background: var(--background-modifier-hover);
@@ -585,17 +534,38 @@
   padding: 4px 2px;
 }
 
-/* Shrink button in toolbar */
-.miller-nav-shrink-btn {
-  color: var(--text-faint);
-}
+/* ========================================================================== */
+/* DRAG AND DROP STYLES                                                       */
+/* ========================================================================== */
 
-.miller-nav-shrink-btn:hover {
+.miller-nav-item.is-dragging {
+  opacity: 0.5;
   background: var(--background-modifier-hover);
-  color: var(--text-normal);
 }
 
-/* ========== Selection Count Badge ========== */
+.miller-nav-item.miller-nav-drop-hover {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.miller-nav-item.miller-nav-drop-hover .miller-nav-icon,
+.miller-nav-item.miller-nav-drop-hover .miller-nav-chevron,
+.miller-nav-item.miller-nav-drop-hover .miller-nav-arrow {
+  color: var(--text-on-accent);
+}
+
+.miller-nav-column.miller-nav-drop-target {
+  background: rgba(var(--interactive-accent-rgb), 0.1);
+  outline: 2px dashed var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.miller-nav-list.miller-nav-drop-target {
+  background: rgba(var(--interactive-accent-rgb), 0.05);
+}
+
 .miller-nav-selection-count {
   position: fixed;
   bottom: 20px;
@@ -612,7 +582,10 @@
   pointer-events: none;
 }
 
-/* ========== Delete Confirmation Modal ========== */
+/* ========================================================================== */
+/* MODAL STYLES                                                               */
+/* ========================================================================== */
+
 .miller-nav-delete-modal {
   padding: 16px;
 }
@@ -679,4 +652,98 @@
 
 .miller-nav-delete-buttons button.mod-warning:hover {
   opacity: 0.9;
+}
+
+/* ========================================================================== */
+/* SETTINGS STYLES                                                            */
+/* ========================================================================== */
+
+.miller-nav-settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.miller-nav-settings-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  font-size: 14px;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-settings-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.miller-nav-settings-content {
+  padding-top: 8px;
+}
+
+.miller-nav-settings-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.miller-nav-settings-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.miller-nav-settings-folder-item.is-invalid {
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+.miller-nav-settings-folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.miller-nav-settings-folder-path {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.miller-nav-settings-folder-level {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.miller-nav-settings-folder-missing {
+  color: var(--text-error);
+  font-size: 11px;
+}
+
+.miller-nav-settings-folder-remove {
+  padding: 4px 8px;
+  font-size: 12px;
 }

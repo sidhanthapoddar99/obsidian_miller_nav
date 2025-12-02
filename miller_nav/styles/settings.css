@@ -1,0 +1,96 @@
+/**
+ * Settings page styles
+ */
+
+/* ========== Settings Tabs ========== */
+.miller-nav-settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.miller-nav-settings-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  font-size: 14px;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-settings-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* ========== Settings Content ========== */
+.miller-nav-settings-content {
+  padding-top: 8px;
+}
+
+.miller-nav-settings-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ========== Folder List ========== */
+.miller-nav-settings-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.miller-nav-settings-folder-item.is-invalid {
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+.miller-nav-settings-folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.miller-nav-settings-folder-path {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.miller-nav-settings-folder-level {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.miller-nav-settings-folder-missing {
+  color: var(--text-error);
+  font-size: 11px;
+}
+
+.miller-nav-settings-folder-remove {
+  padding: 4px 8px;
+  font-size: 12px;
+}

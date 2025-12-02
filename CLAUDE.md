@@ -73,3 +73,7 @@ npm run build     # Production build
 4. Reload Obsidian to see changes after rebuilding
 5. Location of the plugin foler is in @.env file under `OBSIDIAN_TEST_VAULT_PATH`
 
+# Updates 
+
+- After refactoring add the details in `refactoring_log.md` file -- keep code only where absolutely necessary else describe in table and words 
+- After adding/editing feature update `the features.md` 

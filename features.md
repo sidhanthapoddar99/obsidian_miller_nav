@@ -74,6 +74,35 @@
 
 ---
 
+## Recent Enhancements (December 2025)
+
+### File Display & Visual Feedback
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Active File Highlighting | Currently open file is highlighted with accent border and icon color | ✅ Done |
+| All File Types Support | Shows all files, not just .md (canvas, base, pdf, images, audio, video with appropriate icons) | ✅ Done |
+| Unknown Extension Labels | Unknown file types show dimmed uppercase extension label (e.g., "DRAWING", "TXT") | ✅ Done |
+| Ignored Extensions Setting | Setting to hide specific file extensions from navigator | ✅ Done |
+
+### File Management
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Create Canvas/Base | Footer and right-click menu now have options to create Canvas (.canvas) and Base (.base) files | ✅ Done |
+| Rename Functionality | Working rename modal for files and folders (Enter to confirm, Escape to cancel) | ✅ Done |
+
+### UX Improvements
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Auto-close Unused Columns | Clicking item in earlier column closes columns to the right | ✅ Done |
+| Footer Icons Only | Footer buttons now show prominent icons only (32x32) with tooltips, no text labels | ✅ Done |
+
+### Bug Fixes
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Duplicate Panel Fix | Fixed issue where right-click caused duplicate columns due to double event handlers | ✅ Done |
+
+---
+
 ## Phase 2: Virtual Folders & Shortcuts
 
 ### Virtual Folders

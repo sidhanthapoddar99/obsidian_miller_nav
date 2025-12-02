@@ -9,6 +9,7 @@ import type { ColumnState, ViewCallbacks, ViewState } from './types';
 import { renderColumnHeader, renderColumnFooter, renderCollapsedColumn, renderItem } from './components';
 import { DragDropHandler, showContextMenu } from './handlers';
 import { DeleteConfirmModal, RenameModal } from './modals';
+import { findItemByPath, normalizePath, buildPath, FileOperations } from './utils';
 
 export class MillerNavView extends ItemView {
   plugin: MillerNavPlugin;
@@ -17,13 +18,16 @@ export class MillerNavView extends ItemView {
   private columns: ColumnState[] = [{ folderPath: '/', expandedFolders: new Set(), isCollapsed: false }];
   private selectedItems: Set<string> = new Set();
   private dragHandler: DragDropHandler;
+  private fileOps: FileOperations;
   private autoRevealActive: boolean = false;
   private activeFilePath: string | null = null;
+  private cachedCallbacks: ViewCallbacks | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: MillerNavPlugin) {
     super(leaf);
     this.plugin = plugin;
     this.dragHandler = new DragDropHandler(this.app);
+    this.fileOps = new FileOperations(this.app);
     this.autoRevealActive = plugin.settings.autoRevealActiveNote;
     this.activeFilePath = this.app.workspace.getActiveFile()?.path ?? null;
   }
@@ -60,8 +64,10 @@ export class MillerNavView extends ItemView {
     // Listen for active file changes to highlight
     this.registerEvent(
       this.app.workspace.on('file-open', (file) => {
+        const oldPath = this.activeFilePath;
         this.activeFilePath = file?.path ?? null;
-        this.renderAllColumns();
+        // Use targeted update instead of full re-render
+        this.updateActiveFileVisual(oldPath, this.activeFilePath);
       })
     );
 
@@ -76,27 +82,30 @@ export class MillerNavView extends ItemView {
   // ============ Callbacks for child components ============
 
   private getCallbacks(): ViewCallbacks {
-    return {
-      renderAllColumns: () => this.renderAllColumns(),
-      toggleColumnCollapse: (i) => this.toggleColumnCollapse(i),
-      collapseColumnTree: (i) => this.collapseColumnTree(i),
-      closeColumnsFrom: (i) => this.closeColumnsFrom(i),
-      createNote: (path) => this.createNote(path),
-      createFolder: (path) => this.createFolder(path),
-      createCanvas: (path) => this.createCanvas(path),
-      createBase: (path) => this.createBase(path),
-      openSubfolderColumn: (path, i) => this.openSubfolderColumn(path, i),
-      toggleExpand: (path, i) => this.toggleExpand(path, i),
-      handleItemClick: (path, type, i) => this.handleItemClick(path, type, i),
-      moveItems: (paths, target) => this.moveItems(paths, target),
-      deleteItem: (path) => this.deleteItem(path),
-      renameItem: (path) => this.renameItem(path),
-      clearSelection: () => this.clearSelection(),
-      toggleItemSelection: (path, add) => this.toggleItemSelection(path, add),
-      addMarkedFolder: (path) => this.plugin.dataManager.addMarkedFolder(path),
-      removeMarkedFolder: (path) => this.plugin.dataManager.removeMarkedFolder(path),
-      getActiveFilePath: () => this.activeFilePath,
-    };
+    if (!this.cachedCallbacks) {
+      this.cachedCallbacks = {
+        renderAllColumns: () => this.renderAllColumns(),
+        toggleColumnCollapse: (i) => this.toggleColumnCollapse(i),
+        collapseColumnTree: (i) => this.collapseColumnTree(i),
+        closeColumnsFrom: (i) => this.closeColumnsFrom(i),
+        createNote: (path) => this.createNote(path),
+        createFolder: (path) => this.createFolder(path),
+        createCanvas: (path) => this.createCanvas(path),
+        createBase: (path) => this.createBase(path),
+        openSubfolderColumn: (path, i) => this.openSubfolderColumn(path, i),
+        toggleExpand: (path, i) => this.toggleExpand(path, i),
+        handleItemClick: (path, type, i) => this.handleItemClick(path, type, i),
+        moveItems: (paths, target) => this.moveItems(paths, target),
+        deleteItem: (path) => this.deleteItem(path),
+        renameItem: (path) => this.renameItem(path),
+        clearSelection: () => this.clearSelection(),
+        toggleItemSelection: (path, add) => this.toggleItemSelection(path, add),
+        addMarkedFolder: (path) => this.plugin.dataManager.addMarkedFolder(path),
+        removeMarkedFolder: (path) => this.plugin.dataManager.removeMarkedFolder(path),
+        getActiveFilePath: () => this.activeFilePath,
+      };
+    }
+    return this.cachedCallbacks!;
   }
 
   // ============ Navigation Logic ============
@@ -126,11 +135,14 @@ export class MillerNavView extends ItemView {
   // ============ Selection ============
 
   private clearSelection(): void {
+    const oldSelection = new Set(this.selectedItems);
     this.selectedItems.clear();
-    this.renderAllColumns();
+    // Use targeted update instead of full re-render
+    this.updateSelectionVisuals(oldSelection, this.selectedItems);
   }
 
   private toggleItemSelection(path: string, addToSelection: boolean): void {
+    const oldSelection = new Set(this.selectedItems);
     if (addToSelection) {
       if (this.selectedItems.has(path)) {
         this.selectedItems.delete(path);
@@ -141,7 +153,44 @@ export class MillerNavView extends ItemView {
       this.selectedItems.clear();
       this.selectedItems.add(path);
     }
-    this.renderAllColumns();
+    // Use targeted update instead of full re-render
+    this.updateSelectionVisuals(oldSelection, this.selectedItems);
+  }
+
+  // ============ Targeted Visual Updates ============
+
+  /**
+   * Update only selection-related CSS classes without full re-render
+   */
+  private updateSelectionVisuals(oldSelection: Set<string>, newSelection: Set<string>): void {
+    // Remove selection from items no longer selected
+    for (const path of oldSelection) {
+      if (!newSelection.has(path)) {
+        const el = findItemByPath(this.columnsContainer, path);
+        if (el) el.removeClass('is-multi-selected');
+      }
+    }
+    // Add selection to newly selected items
+    for (const path of newSelection) {
+      if (!oldSelection.has(path)) {
+        const el = findItemByPath(this.columnsContainer, path);
+        if (el) el.addClass('is-multi-selected');
+      }
+    }
+  }
+
+  /**
+   * Update only active file CSS class without full re-render
+   */
+  private updateActiveFileVisual(oldPath: string | null, newPath: string | null): void {
+    if (oldPath) {
+      const oldEl = findItemByPath(this.columnsContainer, oldPath);
+      if (oldEl) oldEl.removeClass('is-active-file');
+    }
+    if (newPath) {
+      const newEl = findItemByPath(this.columnsContainer, newPath);
+      if (newEl) newEl.addClass('is-active-file');
+    }
   }
 
   // ============ Column Management ============
@@ -165,8 +214,7 @@ export class MillerNavView extends ItemView {
   }
 
   private openSubfolderColumn(folderPath: string, fromColumnIndex: number): void {
-    // Normalize path (remove trailing slashes except for root)
-    const normalizedPath = folderPath === '/' ? '/' : folderPath.replace(/\/+$/, '');
+    const normalizedPath = normalizePath(folderPath);
 
     // Check if column for this folder already exists at any position
     const existingIndex = this.columns.findIndex(col => col.folderPath === normalizedPath);
@@ -236,41 +284,22 @@ export class MillerNavView extends ItemView {
   }
 
   private async createNote(folderPath: string): Promise<void> {
-    const folder = folderPath === '/' ? '' : folderPath;
-    const newPath = `${folder}/Untitled.md`.replace(/^\//, '');
-    const file = await this.app.vault.create(newPath, '');
-    await this.app.workspace.getLeaf().openFile(file);
-    await this.renderAllColumns();
+    await this.fileOps.createFile(folderPath, 'note', () => this.renderAllColumns());
   }
 
   private async createFolder(parentPath: string): Promise<void> {
-    const parent = parentPath === '/' ? '' : parentPath;
-    const newPath = `${parent}/New Folder`.replace(/^\//, '');
-    await this.app.vault.createFolder(newPath);
-    await this.renderAllColumns();
+    await this.fileOps.createFolder(parentPath, () => this.renderAllColumns());
   }
 
   private async createCanvas(folderPath: string): Promise<void> {
-    const folder = folderPath === '/' ? '' : folderPath;
-    const newPath = `${folder}/Untitled.canvas`.replace(/^\//, '');
-    // Canvas files are JSON with empty canvas structure
-    const canvasContent = JSON.stringify({ nodes: [], edges: [] });
-    const file = await this.app.vault.create(newPath, canvasContent);
-    await this.app.workspace.getLeaf().openFile(file);
-    await this.renderAllColumns();
+    await this.fileOps.createFile(folderPath, 'canvas', () => this.renderAllColumns());
   }
 
   private async createBase(folderPath: string): Promise<void> {
-    const folder = folderPath === '/' ? '' : folderPath;
-    const newPath = `${folder}/Untitled.base`.replace(/^\//, '');
-    // Base files are JSON with empty database structure
-    const baseContent = JSON.stringify({ columns: [], rows: [] });
-    const file = await this.app.vault.create(newPath, baseContent);
-    await this.app.workspace.getLeaf().openFile(file);
-    await this.renderAllColumns();
+    await this.fileOps.createFile(folderPath, 'base', () => this.renderAllColumns());
   }
 
-  private async renameItem(path: string): Promise<void> {
+  private renameItem(path: string): void {
     const file = this.app.vault.getAbstractFileByPath(path);
     if (!file) return;
 
@@ -278,22 +307,7 @@ export class MillerNavView extends ItemView {
     const currentName = isFolder ? file.name : (file as TFile).basename;
 
     new RenameModal(this.app, currentName, isFolder, async (newName: string) => {
-      try {
-        const parentPath = file.parent?.path ?? '';
-        let newPath: string;
-
-        if (isFolder) {
-          newPath = parentPath ? `${parentPath}/${newName}` : newName;
-        } else {
-          const extension = (file as TFile).extension;
-          newPath = parentPath ? `${parentPath}/${newName}.${extension}` : `${newName}.${extension}`;
-        }
-
-        await this.app.fileManager.renameFile(file, newPath);
-        await this.renderAllColumns();
-      } catch (error) {
-        console.error('Failed to rename:', error);
-      }
+      await this.fileOps.rename(path, newName, () => this.renderAllColumns());
     }).open();
   }
 
@@ -303,10 +317,7 @@ export class MillerNavView extends ItemView {
 
     const itemName = path.split('/').pop() ?? path;
 
-    const doDelete = async () => {
-      await this.app.vault.trash(file, true);
-      await this.renderAllColumns();
-    };
+    const doDelete = () => this.fileOps.delete(path, () => this.renderAllColumns());
 
     if (this.plugin.settings.confirmBeforeDelete) {
       new DeleteConfirmModal(this.app, [itemName], doDelete).open();

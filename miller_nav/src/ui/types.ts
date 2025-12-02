@@ -47,7 +47,7 @@ export interface ViewCallbacks {
   handleItemClick: (path: string, type: string, columnIndex: number) => void;
   moveItems: (itemPaths: string[], targetFolderPath: string) => Promise<void>;
   deleteItem: (path: string) => Promise<void>;
-  renameItem: (path: string) => Promise<void>;
+  renameItem: (path: string) => void;
   clearSelection: () => void;
   toggleItemSelection: (path: string, addToSelection: boolean) => void;
   addMarkedFolder: (path: string) => void;

@@ -5,8 +5,8 @@
  * Secondary Nav: [Collapse Nav] [Name] [Sort][Search]
  */
 
-import { setIcon } from 'obsidian';
 import type { ColumnState, ViewCallbacks } from '../types';
+import { createToolbarButton, createFooterButton, getPathName } from '../utils';
 
 export interface ColumnHeaderOptions {
   columnEl: HTMLElement;
@@ -35,79 +35,61 @@ export function renderColumnHeader(options: ColumnHeaderOptions): void {
   const isPrimary = columnIndex === 0;
 
   // Left side - Collapse Nav button
-  const shrinkBtn = headerEl.createSpan({
+  createToolbarButton({
+    parent: headerEl,
+    icon: 'panel-left-close',
+    ariaLabel: 'Collapse column',
     cls: 'miller-nav-toolbar-btn miller-nav-shrink-btn',
-    attr: { 'aria-label': 'Collapse column' }
-  });
-  setIcon(shrinkBtn, 'panel-left-close');
-  shrinkBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.toggleColumnCollapse(columnIndex);
+    onClick: () => callbacks.toggleColumnCollapse(columnIndex)
   });
 
   // Title
   const titleEl = headerEl.createSpan({ cls: 'miller-nav-column-title' });
-  if (isPrimary) {
-    titleEl.textContent = 'Navigator';
-  } else {
-    const folderName = columnState.folderPath.split('/').pop() ?? columnState.folderPath;
-    titleEl.textContent = folderName;
-  }
+  titleEl.textContent = isPrimary ? 'Navigator' : getPathName(columnState.folderPath);
 
   // Right side toolbar
   const toolbarEl = headerEl.createDiv({ cls: 'miller-nav-column-toolbar' });
 
   // Primary nav only: Auto Reveal
   if (isPrimary && onAutoRevealToggle) {
-    const autoRevealBtn = toolbarEl.createSpan({
-      cls: `miller-nav-toolbar-btn ${autoRevealActive ? 'is-active' : ''}`,
-      attr: { 'aria-label': 'Auto reveal active file' }
-    });
-    setIcon(autoRevealBtn, 'crosshair');
-    autoRevealBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onAutoRevealToggle();
+    createToolbarButton({
+      parent: toolbarEl,
+      icon: 'crosshair',
+      ariaLabel: 'Auto reveal active file',
+      isActive: autoRevealActive,
+      onClick: onAutoRevealToggle
     });
   }
 
   // Primary nav only: Collapse All
   if (isPrimary) {
-    const collapseAllBtn = toolbarEl.createSpan({
-      cls: 'miller-nav-toolbar-btn',
-      attr: { 'aria-label': 'Collapse all' }
-    });
-    setIcon(collapseAllBtn, 'chevrons-down-up');
-    collapseAllBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      callbacks.collapseColumnTree(columnIndex);
+    createToolbarButton({
+      parent: toolbarEl,
+      icon: 'chevrons-down-up',
+      ariaLabel: 'Collapse all',
+      onClick: () => callbacks.collapseColumnTree(columnIndex)
     });
   }
 
-  // Sort button (all navs, but only secondary+ will use it for now)
-  if (!isPrimary) {
-    const sortBtn = toolbarEl.createSpan({
-      cls: 'miller-nav-toolbar-btn',
-      attr: { 'aria-label': 'Sort' }
-    });
-    setIcon(sortBtn, 'arrow-up-down');
-    sortBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (onSort) onSort();
-      // TODO: Implement sort functionality
+  // Sort button (secondary columns only)
+  if (!isPrimary && onSort) {
+    createToolbarButton({
+      parent: toolbarEl,
+      icon: 'arrow-up-down',
+      ariaLabel: 'Sort',
+      onClick: onSort
     });
   }
 
-  // Search button (all navs)
-  const searchBtn = toolbarEl.createSpan({
-    cls: 'miller-nav-toolbar-btn',
-    attr: { 'aria-label': 'Search' }
-  });
-  setIcon(searchBtn, 'search');
-  searchBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (onSearch) onSearch();
-    // TODO: Implement search functionality
-  });
+  // Search button (all columns)
+  if (onSearch) {
+    createToolbarButton({
+      parent: toolbarEl,
+      icon: 'search',
+      ariaLabel: 'Search',
+      onClick: onSearch
+    });
+  }
 }
 
 /**
@@ -120,47 +102,31 @@ export function renderColumnFooter(
 ): void {
   const footerEl = columnEl.createDiv({ cls: 'miller-nav-column-footer' });
 
-  // New Note button
-  const newNoteBtn = footerEl.createSpan({
-    cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New note', 'title': 'New note' }
-  });
-  setIcon(newNoteBtn, 'file-plus');
-  newNoteBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.createNote(folderPath);
+  createFooterButton({
+    parent: footerEl,
+    icon: 'file-plus',
+    label: 'New note',
+    onClick: () => callbacks.createNote(folderPath)
   });
 
-  // New Folder button
-  const newFolderBtn = footerEl.createSpan({
-    cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New folder', 'title': 'New folder' }
-  });
-  setIcon(newFolderBtn, 'folder-plus');
-  newFolderBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.createFolder(folderPath);
+  createFooterButton({
+    parent: footerEl,
+    icon: 'folder-plus',
+    label: 'New folder',
+    onClick: () => callbacks.createFolder(folderPath)
   });
 
-  // New Canvas button
-  const newCanvasBtn = footerEl.createSpan({
-    cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New canvas', 'title': 'New canvas' }
-  });
-  setIcon(newCanvasBtn, 'layout-dashboard');
-  newCanvasBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.createCanvas(folderPath);
+  createFooterButton({
+    parent: footerEl,
+    icon: 'layout-dashboard',
+    label: 'New canvas',
+    onClick: () => callbacks.createCanvas(folderPath)
   });
 
-  // New Base button
-  const newBaseBtn = footerEl.createSpan({
-    cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New base', 'title': 'New base' }
-  });
-  setIcon(newBaseBtn, 'database');
-  newBaseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    callbacks.createBase(folderPath);
+  createFooterButton({
+    parent: footerEl,
+    icon: 'database',
+    label: 'New base',
+    onClick: () => callbacks.createBase(folderPath)
   });
 }

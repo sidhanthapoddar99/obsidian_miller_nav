@@ -14,6 +14,7 @@ export interface ItemRendererOptions {
   columnState: ColumnState;
   selectedItems: Set<string>;
   opensHorizontally: boolean;
+  isActiveFile?: boolean;
   callbacks: ViewCallbacks;
   onDragStart: (item: PaneItem, columnIndex: number) => void;
   onDragEnd: () => void;
@@ -29,6 +30,7 @@ export function renderItem(options: ItemRendererOptions): void {
     columnState,
     selectedItems,
     opensHorizontally,
+    isActiveFile,
     callbacks,
     onDragStart,
     onDragEnd,
@@ -47,6 +49,11 @@ export function renderItem(options: ItemRendererOptions): void {
   // Check if item is in multi-selection
   if (selectedItems.has(item.path)) {
     el.addClass('is-multi-selected');
+  }
+
+  // Highlight if this is the currently active/open file
+  if (isActiveFile) {
+    el.addClass('is-active-file');
   }
 
   // Setup draggable (except root and virtual items)
@@ -80,6 +87,12 @@ export function renderItem(options: ItemRendererOptions): void {
     nameEl.style.color = item.color;
   }
 
+  // Render extension label for unknown file types
+  if (item.extension) {
+    const extEl = el.createSpan({ cls: 'miller-nav-extension' });
+    extEl.textContent = item.extension;
+  }
+
   // Render note count
   if (item.noteCount !== undefined && item.noteCount > 0) {
     const countEl = el.createSpan({ cls: 'miller-nav-count' });
@@ -96,14 +109,7 @@ export function renderItem(options: ItemRendererOptions): void {
   // Setup click handler
   setupClickHandler(el, item, columnIndex, callbacks);
 
-  // Setup context menu
-  el.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    if (!selectedItems.has(item.path)) {
-      callbacks.clearSelection();
-      callbacks.toggleItemSelection(item.path, false);
-    }
-  });
+  // Context menu is handled in MillerNavView.renderItemElement
 }
 
 function renderChevron(
@@ -204,12 +210,13 @@ function setupClickHandler(
   callbacks: ViewCallbacks
 ): void {
   el.addEventListener('click', (e) => {
+    e.stopPropagation();
     const isModifierPressed = e.ctrlKey || e.metaKey;
 
     if (isModifierPressed && item.type !== 'virtual') {
       callbacks.toggleItemSelection(item.path, true);
     } else {
-      callbacks.clearSelection();
+      // Don't call clearSelection() here - handleItemClick will manage state
       callbacks.handleItemClick(item.path, item.type, columnIndex);
     }
   });

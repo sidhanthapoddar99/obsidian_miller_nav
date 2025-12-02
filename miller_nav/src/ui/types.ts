@@ -40,6 +40,8 @@ export interface ViewCallbacks {
   closeColumnsFrom: (columnIndex: number) => void;
   createNote: (folderPath: string) => Promise<void>;
   createFolder: (folderPath: string) => Promise<void>;
+  createCanvas: (folderPath: string) => Promise<void>;
+  createBase: (folderPath: string) => Promise<void>;
   openSubfolderColumn: (folderPath: string, fromColumnIndex: number) => void;
   toggleExpand: (path: string, columnIndex: number) => void;
   handleItemClick: (path: string, type: string, columnIndex: number) => void;
@@ -50,4 +52,5 @@ export interface ViewCallbacks {
   toggleItemSelection: (path: string, addToSelection: boolean) => void;
   addMarkedFolder: (path: string) => void;
   removeMarkedFolder: (path: string) => void;
+  getActiveFilePath: () => string | null;
 }

@@ -194,6 +194,23 @@ export class MillerNavSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl)
+      .setName('Ignored file extensions')
+      .setDesc('Comma-separated list of file extensions to hide (without dot, e.g.: exe, dll, json)')
+      .addTextArea((text) =>
+        text
+          .setPlaceholder('exe, dll, json')
+          .setValue(this.plugin.settings.ignoredExtensions.join(', '))
+          .onChange(async (value) => {
+            this.plugin.settings.ignoredExtensions = value
+              .split(',')
+              .map((s) => s.trim().toLowerCase().replace(/^\./, ''))
+              .filter((s) => s.length > 0);
+            await this.plugin.saveSettings();
+            this.plugin.refreshViews();
+          })
+      );
   }
 
   private displaySubfoldersSettings(containerEl: HTMLElement): void {

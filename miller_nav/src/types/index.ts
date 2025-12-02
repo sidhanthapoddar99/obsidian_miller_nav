@@ -45,6 +45,9 @@ export interface MillerNavSettings {
   excludedFolders: string[];
   excludedNotes: string[];
   syncUIState: boolean;
+
+  // File types
+  ignoredExtensions: string[];
 }
 
 /**
@@ -129,6 +132,7 @@ export interface PaneItem {
   color?: string;
   virtualType?: VirtualFolderType;
   noteCount?: number;
+  extension?: string;  // For non-md files to show extension label
 }
 
 /**
@@ -179,6 +183,8 @@ export const DEFAULT_SETTINGS: MillerNavSettings = {
   excludedFolders: [],
   excludedNotes: [],
   syncUIState: false,
+
+  ignoredExtensions: [],
 };
 
 /**

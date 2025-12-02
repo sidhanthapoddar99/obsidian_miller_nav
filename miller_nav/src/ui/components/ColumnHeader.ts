@@ -111,7 +111,7 @@ export function renderColumnHeader(options: ColumnHeaderOptions): void {
 }
 
 /**
- * Render footer with New Note and New Folder buttons
+ * Render footer with New Note, New Folder, New Canvas, New Base buttons (icons only)
  */
 export function renderColumnFooter(
   columnEl: HTMLElement,
@@ -123,11 +123,9 @@ export function renderColumnFooter(
   // New Note button
   const newNoteBtn = footerEl.createSpan({
     cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New note' }
+    attr: { 'aria-label': 'New note', 'title': 'New note' }
   });
   setIcon(newNoteBtn, 'file-plus');
-  const newNoteLabel = newNoteBtn.createSpan({ cls: 'miller-nav-footer-label' });
-  newNoteLabel.textContent = 'New Note';
   newNoteBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     callbacks.createNote(folderPath);
@@ -136,13 +134,33 @@ export function renderColumnFooter(
   // New Folder button
   const newFolderBtn = footerEl.createSpan({
     cls: 'miller-nav-footer-btn',
-    attr: { 'aria-label': 'New folder' }
+    attr: { 'aria-label': 'New folder', 'title': 'New folder' }
   });
   setIcon(newFolderBtn, 'folder-plus');
-  const newFolderLabel = newFolderBtn.createSpan({ cls: 'miller-nav-footer-label' });
-  newFolderLabel.textContent = 'New Folder';
   newFolderBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     callbacks.createFolder(folderPath);
+  });
+
+  // New Canvas button
+  const newCanvasBtn = footerEl.createSpan({
+    cls: 'miller-nav-footer-btn',
+    attr: { 'aria-label': 'New canvas', 'title': 'New canvas' }
+  });
+  setIcon(newCanvasBtn, 'layout-dashboard');
+  newCanvasBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.createCanvas(folderPath);
+  });
+
+  // New Base button
+  const newBaseBtn = footerEl.createSpan({
+    cls: 'miller-nav-footer-btn',
+    attr: { 'aria-label': 'New base', 'title': 'New base' }
+  });
+  setIcon(newBaseBtn, 'database');
+  newBaseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.createBase(folderPath);
   });
 }

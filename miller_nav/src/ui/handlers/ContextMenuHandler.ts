@@ -193,7 +193,7 @@ function showFolderContextMenu(menu: Menu, options: FolderMenuOptions): void {
   menu.addItem((menuItem) => {
     menuItem
       .setTitle('New note')
-      .setIcon('plus')
+      .setIcon('file-plus')
       .onClick(() => callbacks.createNote(item.path));
   });
 
@@ -202,6 +202,20 @@ function showFolderContextMenu(menu: Menu, options: FolderMenuOptions): void {
       .setTitle('New folder')
       .setIcon('folder-plus')
       .onClick(() => callbacks.createFolder(item.path));
+  });
+
+  menu.addItem((menuItem) => {
+    menuItem
+      .setTitle('New canvas')
+      .setIcon('layout-dashboard')
+      .onClick(() => callbacks.createCanvas(item.path));
+  });
+
+  menu.addItem((menuItem) => {
+    menuItem
+      .setTitle('New base')
+      .setIcon('database')
+      .onClick(() => callbacks.createBase(item.path));
   });
 
   menu.addSeparator();

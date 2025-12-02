@@ -1,0 +1,380 @@
+/**
+ * MillerNav Styles
+ * Clean, minimal navigation UI with Miller columns
+ */
+
+/* ========== Container ========== */
+.miller-nav-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+
+/* ========== Miller Columns Layout ========== */
+.miller-nav-columns {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.miller-nav-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--background-modifier-border);
+  overflow: hidden;
+}
+
+.miller-nav-column:last-child {
+  border-right: none;
+}
+
+/* First column can grow to fill space if alone */
+.miller-nav-column:first-child:last-child {
+  max-width: none;
+  flex: 1;
+}
+
+/* Column header (for subfolder columns) */
+.miller-nav-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--background-primary-alt);
+  border-bottom: 1px solid var(--background-modifier-border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.miller-nav-column-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-faint);
+}
+
+.miller-nav-column-close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-column-close svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ========== List ========== */
+.miller-nav-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+}
+
+/* ========== Items ========== */
+.miller-nav-item {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  gap: 6px;
+  transition: background 0.1s ease;
+}
+
+.miller-nav-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.miller-nav-item.is-selected {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* Chevron */
+.miller-nav-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  border-radius: 3px;
+}
+
+.miller-nav-chevron:hover {
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
+}
+
+.miller-nav-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.miller-nav-chevron-empty {
+  width: 18px;
+}
+
+/* Icon */
+.miller-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.miller-nav-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Name */
+.miller-nav-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Count badge */
+.miller-nav-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Arrow for subfolders */
+.miller-nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.miller-nav-arrow svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Subfolder styling */
+.miller-nav-subfolder {
+  font-weight: 500;
+}
+
+.miller-nav-subfolder .miller-nav-icon {
+  color: var(--interactive-accent);
+}
+
+/* Selected state overrides */
+.miller-nav-item.is-selected .miller-nav-icon,
+.miller-nav-item.is-selected .miller-nav-chevron,
+.miller-nav-item.is-selected .miller-nav-arrow {
+  color: var(--text-on-accent);
+}
+
+.miller-nav-item.is-selected .miller-nav-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-on-accent);
+}
+
+/* ========== Mobile ========== */
+.miller-nav-mobile .miller-nav-columns {
+  /* On mobile, show only one column at a time */
+  overflow-x: hidden;
+}
+
+.miller-nav-mobile .miller-nav-column {
+  min-width: 100%;
+  max-width: 100%;
+}
+
+.miller-nav-mobile .miller-nav-item {
+  height: 44px;
+  padding: 0 12px;
+}
+
+.miller-nav-mobile .miller-nav-chevron {
+  width: 24px;
+  height: 24px;
+}
+
+.miller-nav-mobile .miller-nav-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+
+.miller-nav-mobile .miller-nav-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.miller-nav-mobile .miller-nav-name {
+  font-size: 15px;
+}
+
+/* ========== Scrollbar ========== */
+.miller-nav-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.miller-nav-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* Horizontal scrollbar for columns container */
+.miller-nav-columns::-webkit-scrollbar {
+  height: 6px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.miller-nav-columns::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* ========== Settings Page ========== */
+
+/* Settings tabs */
+.miller-nav-settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+}
+
+.miller-nav-settings-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  font-size: 14px;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-settings-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-settings-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.miller-nav-settings-content {
+  padding-top: 8px;
+}
+
+.miller-nav-settings-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.miller-nav-settings-folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-settings-folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.miller-nav-settings-folder-item.is-invalid {
+  background: rgba(var(--color-red-rgb), 0.1);
+}
+
+.miller-nav-settings-folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.miller-nav-settings-folder-path {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.miller-nav-settings-folder-level {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.miller-nav-settings-folder-missing {
+  color: var(--text-error);
+  font-size: 11px;
+}
+
+.miller-nav-settings-folder-remove {
+  padding: 4px 8px;
+  font-size: 12px;
+}

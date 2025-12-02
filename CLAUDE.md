@@ -31,7 +31,7 @@
   4. Phase 4: Mobile support & performance optimization
   5. Phase 5: Polish, integrations, documentation
 
-refer to @SRS.md for detailed requirements specification.
+refer to ./SRS.md for detailed requirements specification.
 
 ## Reference Implementation
 
@@ -46,3 +46,30 @@ refer to @SRS.md for detailed requirements specification.
 ## Testing
 
 - `obsidian_test_note/` - This folder is used to test the extension
+
+## Project Structure
+
+- `miller_nav/` - The Obsidian plugin source code
+  - `src/` - TypeScript source files
+  - `styles/` - CSS styles
+  - `manifest.json` - Plugin manifest
+  - `package.json` - npm dependencies
+- `reference/notebook-navigator/` - Reference implementation (cloned from GitHub)
+
+## Development Commands
+
+```bash
+cd miller_nav
+npm install       # Install dependencies
+npm run dev       # Start development build (watch mode)
+npm run build     # Production build
+```
+
+## Installation for Testing
+
+1. Build the plugin: `cd miller_nav && npm run build`
+2. Copy `miller_nav/main.js`, `miller_nav/manifest.json`, and `miller_nav/styles/styles.css` to your test vault's `.obsidian/plugins/miller-nav/` folder
+3. Enable the plugin in Obsidian settings
+4. Reload Obsidian to see changes after rebuilding
+5. Location of the plugin foler is in @.env file under `OBSIDIAN_TEST_VAULT_PATH`
+

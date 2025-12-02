@@ -47,6 +47,31 @@
 | Context Menus | Right-click actions | ✅ Done |
 | Note Count Badge | Show file count on folders | ✅ Done |
 
+### Drag & Drop
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Drag Files | Drag files to move between folders | ✅ Done |
+| Drag Folders | Drag folders to reorganize | ✅ Done |
+| Drop Targets | Visual feedback on valid drop targets | ✅ Done |
+| Multi-item Drag | Drag multiple selected items at once | ✅ Done |
+
+### Multi-Selection
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Ctrl/Cmd+Click | Toggle item selection | ✅ Done |
+| Selection Highlight | Visual indicator for selected items | ✅ Done |
+| Bulk Actions | Context menu actions on multiple items | ✅ Done |
+| Clear Selection | Click elsewhere to deselect | ✅ Done |
+
+### Column Collapse
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Shrink Column | Collapse column to narrow strip | ✅ Done |
+| Expand Column | Restore collapsed column | ✅ Done |
+| Level Indicator | Show level number on collapsed strip | ✅ Done |
+| Folder Name | Show folder name vertically | ✅ Done |
+| Selected Item | Show selected item on collapsed strip | ✅ Done |
+
 ---
 
 ## Phase 2: Virtual Folders & Shortcuts
@@ -65,13 +90,6 @@
 | Add Shortcut | Add file/folder to shortcuts | 🔲 Pending |
 | Remove Shortcut | Remove from shortcuts | 🔲 Pending |
 | Shortcut Ordering | Drag to reorder | 🔲 Pending |
-
-### Cascade Collapse
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Collapse to Level | Hide levels 0 through N-1 | 🔲 Pending |
-| Expand from Collapsed | Restore hidden levels | 🔲 Pending |
-| Collapse Animation | Smooth transitions | 🔲 Pending |
 
 ---
 

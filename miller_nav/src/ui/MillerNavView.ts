@@ -1,26 +1,100 @@
 /**
  * MillerNavView - Main ItemView for the Miller columns navigation
  * Multi-column layout within a single view - subfolders open in adjacent columns
+ *
+ * Features:
+ * - Drag and drop files/folders
+ * - Multi-select with Ctrl/Cmd+click
+ * - Column collapse/shrink
+ * - Bulk actions on selected items
  */
 
-import { ItemView, WorkspaceLeaf, TFolder, TFile, Menu, Platform, setIcon } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFolder, TFile, TAbstractFile, Menu, Platform, setIcon, Modal, App } from 'obsidian';
 import { MILLER_NAV_VIEW, PaneItem } from '../types';
 import type MillerNavPlugin from '../main';
 
 // Represents a single column in the Miller columns layout
 interface ColumnState {
   folderPath: string;
-  selectedItem?: string; // Path of selected item in this column
+  selectedItem?: string; // Path of selected item that opened next column
+  expandedFolders: Set<string>;
+  isCollapsed: boolean; // Whether column is shrunk to a strip
+}
+
+/**
+ * Confirmation modal for delete operations
+ */
+class DeleteConfirmModal extends Modal {
+  private itemNames: string[];
+  private onConfirm: () => void;
+
+  constructor(app: App, itemNames: string[], onConfirm: () => void) {
+    super(app);
+    this.itemNames = itemNames;
+    this.onConfirm = onConfirm;
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('miller-nav-delete-modal');
+
+    const count = this.itemNames.length;
+    const title = count === 1
+      ? `Delete "${this.itemNames[0]}"?`
+      : `Delete ${count} items?`;
+
+    contentEl.createEl('h3', { text: title });
+
+    if (count > 1) {
+      const listEl = contentEl.createEl('ul', { cls: 'miller-nav-delete-list' });
+      for (const name of this.itemNames.slice(0, 5)) {
+        listEl.createEl('li', { text: name });
+      }
+      if (count > 5) {
+        listEl.createEl('li', { text: `...and ${count - 5} more`, cls: 'miller-nav-delete-more' });
+      }
+    }
+
+    contentEl.createEl('p', {
+      text: 'This will move the item(s) to your system trash.',
+      cls: 'miller-nav-delete-note'
+    });
+
+    const buttonContainer = contentEl.createDiv({ cls: 'miller-nav-delete-buttons' });
+
+    const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+    cancelBtn.addEventListener('click', () => this.close());
+
+    const deleteBtn = buttonContainer.createEl('button', {
+      text: 'Delete',
+      cls: 'mod-warning'
+    });
+    deleteBtn.addEventListener('click', () => {
+      this.onConfirm();
+      this.close();
+    });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
 }
 
 export class MillerNavView extends ItemView {
   plugin: MillerNavPlugin;
   private containerEl_: HTMLElement;
   private columnsContainer: HTMLElement;
-  private expandedFolders: Set<string> = new Set();
 
-  // Miller columns state - each column shows contents of a subfolder
-  private columns: ColumnState[] = [{ folderPath: '/' }];
+  // Miller columns state
+  private columns: ColumnState[] = [{ folderPath: '/', expandedFolders: new Set(), isCollapsed: false }];
+
+  // Multi-select state
+  private selectedItems: Set<string> = new Set();
+
+  // Drag state
+  private draggedItem: PaneItem | null = null;
+  private dragSourceColumn: number = -1;
 
   constructor(leaf: WorkspaceLeaf, plugin: MillerNavPlugin) {
     super(leaf);
@@ -49,6 +123,13 @@ export class MillerNavView extends ItemView {
       container.addClass('miller-nav-mobile');
     }
 
+    // Click outside to clear selection
+    container.addEventListener('click', (e) => {
+      if (e.target === container || e.target === this.columnsContainer) {
+        this.clearSelection();
+      }
+    });
+
     // Horizontal container for all columns
     this.columnsContainer = container.createDiv({ cls: 'miller-nav-columns' });
 
@@ -58,6 +139,48 @@ export class MillerNavView extends ItemView {
 
   async onClose(): Promise<void> {
     this.containerEl_.empty();
+  }
+
+  /**
+   * Get the current level based on column index
+   */
+  private getColumnLevel(columnIndex: number): number {
+    return columnIndex;
+  }
+
+  /**
+   * Check if a folder should open horizontally
+   */
+  private shouldOpenHorizontally(folderPath: string, columnIndex: number): boolean {
+    const isMarked = this.plugin.dataManager.isMarkedFolder(folderPath);
+    const currentLevel = this.getColumnLevel(columnIndex);
+    const maxLevels = this.plugin.settings.maxLevels;
+    return isMarked && currentLevel < maxLevels;
+  }
+
+  /**
+   * Clear multi-selection
+   */
+  private clearSelection(): void {
+    this.selectedItems.clear();
+    this.renderAllColumns();
+  }
+
+  /**
+   * Toggle item selection (for multi-select)
+   */
+  private toggleItemSelection(path: string, addToSelection: boolean): void {
+    if (addToSelection) {
+      if (this.selectedItems.has(path)) {
+        this.selectedItems.delete(path);
+      } else {
+        this.selectedItems.add(path);
+      }
+    } else {
+      this.selectedItems.clear();
+      this.selectedItems.add(path);
+    }
+    this.renderAllColumns();
   }
 
   /**
@@ -76,17 +199,70 @@ export class MillerNavView extends ItemView {
    */
   private async renderColumn(columnIndex: number): Promise<void> {
     const columnState = this.columns[columnIndex];
-    const columnEl = this.columnsContainer.createDiv({ cls: 'miller-nav-column' });
+    const columnEl = this.columnsContainer.createDiv({
+      cls: `miller-nav-column ${columnState.isCollapsed ? 'is-collapsed' : ''}`
+    });
     columnEl.setAttribute('data-column', String(columnIndex));
 
-    // Column header for non-root columns
-    if (columnIndex > 0) {
-      const headerEl = columnEl.createDiv({ cls: 'miller-nav-column-header' });
-      const folderName = columnState.folderPath.split('/').pop() ?? columnState.folderPath;
-      headerEl.textContent = folderName;
+    // Make column a drop target
+    this.setupDropTarget(columnEl, columnIndex);
 
-      // Close button
-      const closeBtn = headerEl.createSpan({ cls: 'miller-nav-column-close' });
+    if (columnState.isCollapsed) {
+      // Render collapsed column strip
+      this.renderCollapsedColumn(columnEl, columnIndex);
+      return;
+    }
+
+    // Column header/toolbar
+    const headerEl = columnEl.createDiv({ cls: 'miller-nav-column-header' });
+
+    // Shrink button (left side)
+    const shrinkBtn = headerEl.createSpan({ cls: 'miller-nav-toolbar-btn miller-nav-shrink-btn', attr: { 'aria-label': 'Shrink column' } });
+    setIcon(shrinkBtn, 'panel-left-close');
+    shrinkBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleColumnCollapse(columnIndex);
+    });
+
+    // Title
+    const titleEl = headerEl.createSpan({ cls: 'miller-nav-column-title' });
+    if (columnIndex === 0) {
+      titleEl.textContent = 'Navigator';
+    } else {
+      const folderName = columnState.folderPath.split('/').pop() ?? columnState.folderPath;
+      titleEl.textContent = folderName;
+    }
+
+    // Toolbar buttons
+    const toolbarEl = headerEl.createDiv({ cls: 'miller-nav-column-toolbar' });
+
+    // New Note button
+    const newNoteBtn = toolbarEl.createSpan({ cls: 'miller-nav-toolbar-btn', attr: { 'aria-label': 'New note' } });
+    setIcon(newNoteBtn, 'file-plus');
+    newNoteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.createNote(columnState.folderPath);
+    });
+
+    // New Folder button
+    const newFolderBtn = toolbarEl.createSpan({ cls: 'miller-nav-toolbar-btn', attr: { 'aria-label': 'New folder' } });
+    setIcon(newFolderBtn, 'folder-plus');
+    newFolderBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.createFolder(columnState.folderPath);
+    });
+
+    // Collapse tree button
+    const collapseBtn = toolbarEl.createSpan({ cls: 'miller-nav-toolbar-btn', attr: { 'aria-label': 'Collapse all' } });
+    setIcon(collapseBtn, 'chevrons-down-up');
+    collapseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.collapseColumnTree(columnIndex);
+    });
+
+    // Close button for non-root columns
+    if (columnIndex > 0) {
+      const closeBtn = toolbarEl.createSpan({ cls: 'miller-nav-toolbar-btn miller-nav-column-close', attr: { 'aria-label': 'Close' } });
       setIcon(closeBtn, 'x');
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -97,21 +273,144 @@ export class MillerNavView extends ItemView {
     // List container for this column
     const listEl = columnEl.createDiv({ cls: 'miller-nav-list' });
 
-    // Render content based on column type
+    // Render content
     if (columnIndex === 0) {
-      // First column: virtual folders + vault tree
-      await this.renderRootColumn(listEl);
+      await this.renderRootColumn(listEl, columnIndex);
     } else {
-      // Subsequent columns: subfolder contents
       await this.renderSubfolderColumn(listEl, columnState.folderPath, columnIndex);
     }
   }
 
   /**
-   * Render the root column (column 0) with virtual folders and vault tree
+   * Render a collapsed column as a thin strip
    */
-  private async renderRootColumn(listEl: HTMLElement): Promise<void> {
-    // Virtual folders (Recent, Tags, Shortcuts)
+  private renderCollapsedColumn(columnEl: HTMLElement, columnIndex: number): void {
+    const columnState = this.columns[columnIndex];
+
+    const stripEl = columnEl.createDiv({ cls: 'miller-nav-collapsed-strip' });
+
+    // Make entire strip clickable to expand
+    stripEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleColumnCollapse(columnIndex);
+    });
+
+    // Top section with expand icon
+    const topSection = stripEl.createDiv({ cls: 'miller-nav-collapsed-top' });
+
+    // Expand icon
+    const expandIcon = topSection.createSpan({ cls: 'miller-nav-collapsed-icon' });
+    setIcon(expandIcon, 'chevrons-right');
+
+    // Level badge
+    const levelEl = topSection.createDiv({ cls: 'miller-nav-collapsed-level' });
+    levelEl.textContent = String(columnIndex);
+
+    // Folder icon
+    const folderIcon = stripEl.createDiv({ cls: 'miller-nav-collapsed-folder-icon' });
+    if (columnIndex === 0) {
+      setIcon(folderIcon, 'layout-grid');
+    } else {
+      setIcon(folderIcon, 'folder');
+    }
+
+    // Folder name (vertical text)
+    const nameEl = stripEl.createDiv({ cls: 'miller-nav-collapsed-name' });
+    if (columnIndex === 0) {
+      nameEl.textContent = 'Navigator';
+    } else {
+      const folderName = columnState.folderPath.split('/').pop() ?? '';
+      nameEl.textContent = folderName;
+    }
+
+    // If there's a selected item, show indicator
+    if (columnState.selectedItem) {
+      const selectedEl = stripEl.createDiv({ cls: 'miller-nav-collapsed-selected' });
+      const selectedName = columnState.selectedItem.split('/').pop() ?? '';
+      // Truncate if too long
+      selectedEl.textContent = selectedName.length > 12
+        ? selectedName.substring(0, 10) + '…'
+        : selectedName;
+      selectedEl.setAttribute('aria-label', selectedName);
+    }
+  }
+
+  /**
+   * Toggle column collapse state
+   */
+  private toggleColumnCollapse(columnIndex: number): void {
+    this.columns[columnIndex].isCollapsed = !this.columns[columnIndex].isCollapsed;
+    this.renderAllColumns();
+  }
+
+  /**
+   * Setup drop target for a column
+   */
+  private setupDropTarget(columnEl: HTMLElement, columnIndex: number): void {
+    columnEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (this.draggedItem) {
+        columnEl.addClass('miller-nav-drop-target');
+      }
+    });
+
+    columnEl.addEventListener('dragleave', (e) => {
+      columnEl.removeClass('miller-nav-drop-target');
+    });
+
+    columnEl.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      columnEl.removeClass('miller-nav-drop-target');
+
+      if (this.draggedItem && this.draggedItem.path !== '/') {
+        const targetFolder = this.columns[columnIndex].folderPath;
+        await this.moveItems([this.draggedItem.path], targetFolder);
+      }
+      this.draggedItem = null;
+      this.dragSourceColumn = -1;
+    });
+  }
+
+  /**
+   * Move items to a target folder
+   */
+  private async moveItems(itemPaths: string[], targetFolderPath: string): Promise<void> {
+    const targetFolder = targetFolderPath === '/'
+      ? this.app.vault.getRoot()
+      : this.app.vault.getAbstractFileByPath(targetFolderPath);
+
+    if (!(targetFolder instanceof TFolder)) return;
+
+    for (const itemPath of itemPaths) {
+      const item = this.app.vault.getAbstractFileByPath(itemPath);
+      if (!item) continue;
+
+      // Don't move to same location
+      if (item.parent?.path === targetFolder.path) continue;
+
+      // Don't move folder into itself
+      if (item instanceof TFolder && targetFolderPath.startsWith(itemPath + '/')) continue;
+
+      const newPath = targetFolder.path === '/'
+        ? item.name
+        : `${targetFolder.path}/${item.name}`;
+
+      try {
+        await this.app.fileManager.renameFile(item, newPath);
+      } catch (error) {
+        console.error('Failed to move item:', error);
+      }
+    }
+
+    this.selectedItems.clear();
+    await this.renderAllColumns();
+  }
+
+  /**
+   * Render the root column (column 0)
+   */
+  private async renderRootColumn(listEl: HTMLElement, columnIndex: number): Promise<void> {
+    // Virtual folders
     if (this.plugin.settings.showRecentNotes) {
       this.renderItem(listEl, {
         id: 'virtual-recent',
@@ -122,7 +421,7 @@ export class MillerNavView extends ItemView {
         virtualType: 'recent',
         icon: 'clock',
         hasChildren: false,
-      }, 0, 0);
+      }, 0, columnIndex);
     }
 
     if (this.plugin.settings.showTags) {
@@ -135,7 +434,7 @@ export class MillerNavView extends ItemView {
         virtualType: 'tags',
         icon: 'tag',
         hasChildren: false,
-      }, 0, 0);
+      }, 0, columnIndex);
     }
 
     if (this.plugin.settings.showShortcuts) {
@@ -148,7 +447,7 @@ export class MillerNavView extends ItemView {
         virtualType: 'shortcuts',
         icon: 'star',
         hasChildren: false,
-      }, 0, 0);
+      }, 0, columnIndex);
     }
 
     // Vault root
@@ -163,19 +462,27 @@ export class MillerNavView extends ItemView {
       hasChildren: true,
       icon: 'vault',
     };
-    this.renderItem(listEl, rootItem, 0, 0);
+    this.renderItem(listEl, rootItem, 0, columnIndex);
 
-    // If root is expanded, render its children
-    if (this.expandedFolders.has('/')) {
-      await this.renderFolderChildren(listEl, '/', 1, 0);
+    const columnState = this.columns[columnIndex];
+    if (columnState.expandedFolders.has('/')) {
+      await this.renderFolderChildrenTree(listEl, '/', 1, columnIndex);
     }
   }
 
   /**
-   * Render a subfolder column (columns 1+)
+   * Render a subfolder column
    */
   private async renderSubfolderColumn(listEl: HTMLElement, folderPath: string, columnIndex: number): Promise<void> {
-    await this.renderFolderChildren(listEl, folderPath, 0, columnIndex);
+    const folder = this.app.vault.getAbstractFileByPath(folderPath);
+
+    if (!(folder instanceof TFolder)) {
+      const emptyEl = listEl.createDiv({ cls: 'miller-nav-empty' });
+      emptyEl.textContent = 'Folder not found';
+      return;
+    }
+
+    await this.renderFolderChildrenTree(listEl, folderPath, 0, columnIndex);
   }
 
   /**
@@ -186,34 +493,97 @@ export class MillerNavView extends ItemView {
     el.setAttribute('data-path', item.path);
     el.setAttribute('data-type', item.type);
 
-    // Check if this item is selected (opened a column to the right)
-    const isSelected = this.columns[columnIndex]?.selectedItem === item.path;
-    if (isSelected) {
+    // Check if this item opened a column to the right
+    const isColumnSelected = this.columns[columnIndex]?.selectedItem === item.path;
+    if (isColumnSelected) {
       el.addClass('is-selected');
     }
 
-    // Base padding + indentation (consistent for all items)
+    // Check if item is in multi-selection
+    const isMultiSelected = this.selectedItems.has(item.path);
+    if (isMultiSelected) {
+      el.addClass('is-multi-selected');
+    }
+
+    // Make draggable (except root and virtual items)
+    if (item.type !== 'virtual' && item.path !== '/') {
+      el.setAttribute('draggable', 'true');
+      el.addEventListener('dragstart', (e) => {
+        this.draggedItem = item;
+        this.dragSourceColumn = columnIndex;
+        el.addClass('is-dragging');
+
+        // If multi-selected, drag all selected items
+        if (this.selectedItems.size > 1 && this.selectedItems.has(item.path)) {
+          e.dataTransfer?.setData('text/plain', Array.from(this.selectedItems).join('\n'));
+        } else {
+          e.dataTransfer?.setData('text/plain', item.path);
+        }
+      });
+
+      el.addEventListener('dragend', () => {
+        el.removeClass('is-dragging');
+        this.draggedItem = null;
+        this.dragSourceColumn = -1;
+      });
+    }
+
+    // Drop target for folders
+    if (item.type === 'folder') {
+      el.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.draggedItem && this.draggedItem.path !== item.path) {
+          el.addClass('miller-nav-drop-hover');
+        }
+      });
+
+      el.addEventListener('dragleave', () => {
+        el.removeClass('miller-nav-drop-hover');
+      });
+
+      el.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.removeClass('miller-nav-drop-hover');
+
+        if (this.draggedItem && this.draggedItem.path !== item.path) {
+          // Move selected items or just the dragged item
+          const itemsToMove = this.selectedItems.size > 1 && this.selectedItems.has(this.draggedItem.path)
+            ? Array.from(this.selectedItems)
+            : [this.draggedItem.path];
+
+          await this.moveItems(itemsToMove, item.path);
+        }
+        this.draggedItem = null;
+        this.dragSourceColumn = -1;
+      });
+    }
+
+    // Base padding + indentation
     const basePadding = 8;
     const indentSize = 20;
     el.style.paddingLeft = `${basePadding + indent * indentSize}px`;
 
-    // Chevron for expandable folders, empty space for alignment on others
+    const columnState = this.columns[columnIndex];
+    const opensHorizontally = item.type === 'folder' && this.shouldOpenHorizontally(item.path, columnIndex);
+
+    // Chevron logic
     if (item.type === 'folder') {
-      if (!item.isMarked && item.hasChildren) {
-        // Regular folder with children - show expand chevron
+      if (opensHorizontally) {
+        el.createSpan({ cls: 'miller-nav-chevron miller-nav-chevron-empty' });
+      } else if (item.hasChildren) {
         const chevronEl = el.createSpan({ cls: 'miller-nav-chevron' });
-        const isExpanded = this.expandedFolders.has(item.path);
+        const isExpanded = columnState.expandedFolders.has(item.path);
         setIcon(chevronEl, isExpanded ? 'chevron-down' : 'chevron-right');
         chevronEl.addEventListener('click', (e) => {
           e.stopPropagation();
-          this.toggleExpand(item);
+          this.toggleExpand(item, columnIndex);
         });
       } else {
-        // Subfolder or empty folder - empty space for alignment
         el.createSpan({ cls: 'miller-nav-chevron miller-nav-chevron-empty' });
       }
     } else {
-      // File or virtual folder - empty space for alignment
       el.createSpan({ cls: 'miller-nav-chevron miller-nav-chevron-empty' });
     }
 
@@ -237,36 +607,53 @@ export class MillerNavView extends ItemView {
       countEl.textContent = String(item.noteCount);
     }
 
-    // Arrow for subfolders (indicates opens in new column)
-    if (item.type === 'folder' && item.isMarked) {
+    // Arrow for horizontal-opening folders
+    if (opensHorizontally) {
       const arrowEl = el.createSpan({ cls: 'miller-nav-arrow' });
       setIcon(arrowEl, 'chevron-right');
       el.addClass('miller-nav-subfolder');
     }
 
-    // Click handler
-    el.addEventListener('click', () => this.handleItemClick(item, columnIndex));
+    // Click handler with multi-select support
+    el.addEventListener('click', (e) => {
+      const isModifierPressed = e.ctrlKey || e.metaKey;
+
+      if (isModifierPressed && item.type !== 'virtual') {
+        // Multi-select mode
+        this.toggleItemSelection(item.path, true);
+      } else {
+        // Normal click - clear selection and handle item
+        this.selectedItems.clear();
+        this.handleItemClick(item, columnIndex);
+      }
+    });
 
     // Context menu
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.showContextMenu(e, item);
+      // If right-clicking on an unselected item, select only that item
+      if (!this.selectedItems.has(item.path)) {
+        this.selectedItems.clear();
+        this.selectedItems.add(item.path);
+        this.renderAllColumns();
+      }
+      this.showContextMenu(e, item, columnIndex);
     });
   }
 
   /**
    * Render children of a folder
    */
-  private async renderFolderChildren(listEl: HTMLElement, folderPath: string, indent: number, columnIndex: number): Promise<void> {
+  private async renderFolderChildrenTree(listEl: HTMLElement, folderPath: string, indent: number, columnIndex: number): Promise<void> {
     const folder = folderPath === '/'
       ? this.app.vault.getRoot()
       : this.app.vault.getAbstractFileByPath(folderPath);
 
     if (!(folder instanceof TFolder)) return;
 
+    const columnState = this.columns[columnIndex];
     const items: PaneItem[] = [];
 
-    // Collect children
     for (const child of folder.children) {
       if (child instanceof TFolder) {
         if (child.name.startsWith('.')) continue;
@@ -303,20 +690,25 @@ export class MillerNavView extends ItemView {
       }
     }
 
-    // Sort: folders first, then alphabetically
     items.sort((a, b) => {
       if (a.type === 'folder' && b.type !== 'folder') return -1;
       if (a.type !== 'folder' && b.type === 'folder') return 1;
       return a.name.localeCompare(b.name);
     });
 
-    // Render each item
+    if (items.length === 0 && indent === 0) {
+      const emptyEl = listEl.createDiv({ cls: 'miller-nav-empty' });
+      emptyEl.textContent = 'Empty folder';
+      return;
+    }
+
     for (const item of items) {
       this.renderItem(listEl, item, indent, columnIndex);
 
-      // Recursively render expanded folders (only in column 0 for tree behavior)
-      if (columnIndex === 0 && item.type === 'folder' && !item.isMarked && this.expandedFolders.has(item.path)) {
-        await this.renderFolderChildren(listEl, item.path, indent + 1, columnIndex);
+      if (item.type === 'folder' &&
+          !this.shouldOpenHorizontally(item.path, columnIndex) &&
+          columnState.expandedFolders.has(item.path)) {
+        await this.renderFolderChildrenTree(listEl, item.path, indent + 1, columnIndex);
       }
     }
   }
@@ -335,14 +727,24 @@ export class MillerNavView extends ItemView {
   }
 
   /**
-   * Toggle folder expansion (for unmarked folders in column 0)
+   * Toggle folder expansion
    */
-  private toggleExpand(item: PaneItem): void {
-    if (this.expandedFolders.has(item.path)) {
-      this.expandedFolders.delete(item.path);
+  private toggleExpand(item: PaneItem, columnIndex: number): void {
+    const columnState = this.columns[columnIndex];
+    if (columnState.expandedFolders.has(item.path)) {
+      columnState.expandedFolders.delete(item.path);
     } else {
-      this.expandedFolders.add(item.path);
+      columnState.expandedFolders.add(item.path);
     }
+    this.renderAllColumns();
+  }
+
+  /**
+   * Collapse all folders in a column's tree
+   */
+  private collapseColumnTree(columnIndex: number): void {
+    const columnState = this.columns[columnIndex];
+    columnState.expandedFolders.clear();
     this.renderAllColumns();
   }
 
@@ -351,21 +753,16 @@ export class MillerNavView extends ItemView {
    */
   private handleItemClick(item: PaneItem, columnIndex: number): void {
     if (item.type === 'file') {
-      // Open file
       const file = this.app.vault.getAbstractFileByPath(item.path);
       if (file instanceof TFile) {
         this.app.workspace.getLeaf().openFile(file);
       }
     } else if (item.type === 'folder') {
-      if (item.isMarked) {
-        // Subfolder: open in next column
+      if (this.shouldOpenHorizontally(item.path, columnIndex)) {
         this.openSubfolderColumn(item.path, columnIndex);
       } else {
-        // Regular folder: toggle expand
-        this.toggleExpand(item);
+        this.toggleExpand(item, columnIndex);
       }
-    } else if (item.type === 'virtual') {
-      // TODO: Handle virtual folders
     }
   }
 
@@ -373,56 +770,49 @@ export class MillerNavView extends ItemView {
    * Open a subfolder in the next column
    */
   private openSubfolderColumn(folderPath: string, fromColumnIndex: number): void {
-    // Close any columns after the current one
     this.columns = this.columns.slice(0, fromColumnIndex + 1);
-
-    // Mark the clicked item as selected in its column
     this.columns[fromColumnIndex].selectedItem = folderPath;
-
-    // Add new column for this subfolder
-    this.columns.push({ folderPath });
-
-    // Re-render all columns
+    this.columns.push({ folderPath, expandedFolders: new Set(), isCollapsed: false });
     this.renderAllColumns();
   }
 
   /**
-   * Close columns starting from a specific index
+   * Close columns from index
    */
   private closeColumnsFrom(columnIndex: number): void {
-    // Clear selection from the previous column
     if (columnIndex > 0 && this.columns[columnIndex - 1]) {
       this.columns[columnIndex - 1].selectedItem = undefined;
     }
-
-    // Remove columns from this index onwards
     this.columns = this.columns.slice(0, columnIndex);
-
-    // Re-render
     this.renderAllColumns();
   }
 
   /**
    * Get state for persistence
    */
-  getState(): { columns: ColumnState[], expandedFolders: string[] } {
+  getState(): { columns: Array<{ folderPath: string; selectedItem?: string; expandedFolders: string[]; isCollapsed: boolean }> } {
     return {
-      columns: this.columns,
-      expandedFolders: Array.from(this.expandedFolders)
+      columns: this.columns.map(col => ({
+        folderPath: col.folderPath,
+        selectedItem: col.selectedItem,
+        expandedFolders: Array.from(col.expandedFolders),
+        isCollapsed: col.isCollapsed
+      }))
     };
   }
 
   /**
    * Set state from persistence
    */
-  async setState(state: { columns?: ColumnState[], expandedFolders?: string[] }, result: { history: boolean }): Promise<void> {
-    if (state.columns) {
-      this.columns = state.columns;
+  async setState(state: { columns?: Array<{ folderPath: string; selectedItem?: string; expandedFolders?: string[]; isCollapsed?: boolean }> }, result: { history: boolean }): Promise<void> {
+    if (state.columns && state.columns.length > 0) {
+      this.columns = state.columns.map(col => ({
+        folderPath: col.folderPath,
+        selectedItem: col.selectedItem,
+        expandedFolders: new Set(col.expandedFolders ?? []),
+        isCollapsed: col.isCollapsed ?? false
+      }));
     }
-    if (state.expandedFolders) {
-      this.expandedFolders = new Set(state.expandedFolders);
-    }
-    // Only render if container exists (onOpen has been called)
     if (this.columnsContainer) {
       await this.renderAllColumns();
     }
@@ -431,37 +821,123 @@ export class MillerNavView extends ItemView {
   /**
    * Show context menu
    */
-  showContextMenu(event: MouseEvent, item: PaneItem): void {
+  showContextMenu(event: MouseEvent, item: PaneItem, columnIndex: number): void {
     const menu = new Menu();
+    const selectedCount = this.selectedItems.size;
 
-    if (item.type === 'folder') {
-      const isMarked = this.plugin.dataManager.isMarkedFolder(item.path);
+    // Bulk actions for multiple selected items
+    if (selectedCount > 1) {
+      // Check if all selected are folders
+      const allFolders = Array.from(this.selectedItems).every(path => {
+        const file = this.app.vault.getAbstractFileByPath(path);
+        return file instanceof TFolder;
+      });
+
+      if (allFolders) {
+        const currentLevel = this.getColumnLevel(columnIndex);
+        const maxLevels = this.plugin.settings.maxLevels;
+
+        if (currentLevel < maxLevels) {
+          menu.addItem((menuItem) => {
+            menuItem
+              .setTitle(`Set ${selectedCount} folders as Subfolders`)
+              .setIcon('columns')
+              .onClick(async () => {
+                for (const path of this.selectedItems) {
+                  this.plugin.dataManager.addMarkedFolder(path);
+                }
+                this.selectedItems.clear();
+                await this.renderAllColumns();
+              });
+          });
+
+          menu.addItem((menuItem) => {
+            menuItem
+              .setTitle(`Remove Subfolder from ${selectedCount} folders`)
+              .setIcon('x')
+              .onClick(async () => {
+                for (const path of this.selectedItems) {
+                  this.plugin.dataManager.removeMarkedFolder(path);
+                }
+                this.selectedItems.clear();
+                await this.renderAllColumns();
+              });
+          });
+
+          menu.addSeparator();
+        }
+      }
+
       menu.addItem((menuItem) => {
         menuItem
-          .setTitle(isMarked ? 'Remove Subfolder' : 'Set as Subfolder')
-          .setIcon(isMarked ? 'x' : 'columns')
+          .setTitle(`Delete ${selectedCount} items`)
+          .setIcon('trash')
           .onClick(async () => {
-            // Save current expansion state
-            const savedExpanded = new Set(this.expandedFolders);
+            const pathsToDelete = Array.from(this.selectedItems);
+            const itemNames = pathsToDelete.map(p => p.split('/').pop() ?? p);
 
-            if (isMarked) {
-              this.plugin.dataManager.removeMarkedFolder(item.path);
-              // Close any columns showing this folder
-              const colIndex = this.columns.findIndex(c => c.folderPath === item.path);
-              if (colIndex > 0) {
-                this.closeColumnsFrom(colIndex);
+            const doDelete = async () => {
+              for (const path of pathsToDelete) {
+                const file = this.app.vault.getAbstractFileByPath(path);
+                if (file) {
+                  await this.app.vault.trash(file, true);
+                }
               }
-            } else {
-              this.plugin.dataManager.addMarkedFolder(item.path);
-            }
+              this.selectedItems.clear();
+              await this.renderAllColumns();
+            };
 
-            // Restore expansion state
-            this.expandedFolders = savedExpanded;
-            await this.renderAllColumns();
+            if (this.plugin.settings.confirmBeforeDelete) {
+              new DeleteConfirmModal(this.app, itemNames, doDelete).open();
+            } else {
+              await doDelete();
+            }
           });
       });
 
       menu.addSeparator();
+
+      menu.addItem((menuItem) => {
+        menuItem
+          .setTitle('Clear selection')
+          .setIcon('x-circle')
+          .onClick(() => {
+            this.clearSelection();
+          });
+      });
+
+      menu.showAtMouseEvent(event);
+      return;
+    }
+
+    // Single item context menu
+    if (item.type === 'folder') {
+      const isMarked = this.plugin.dataManager.isMarkedFolder(item.path);
+      const currentLevel = this.getColumnLevel(columnIndex);
+      const maxLevels = this.plugin.settings.maxLevels;
+
+      if (currentLevel < maxLevels) {
+        menu.addItem((menuItem) => {
+          menuItem
+            .setTitle(isMarked ? 'Remove Subfolder' : 'Set as Subfolder')
+            .setIcon(isMarked ? 'x' : 'columns')
+            .onClick(async () => {
+              if (isMarked) {
+                this.plugin.dataManager.removeMarkedFolder(item.path);
+                const colIndex = this.columns.findIndex(c => c.folderPath === item.path);
+                if (colIndex > 0) {
+                  this.closeColumnsFrom(colIndex);
+                  return;
+                }
+              } else {
+                this.plugin.dataManager.addMarkedFolder(item.path);
+              }
+              await this.renderAllColumns();
+            });
+        });
+
+        menu.addSeparator();
+      }
 
       menu.addItem((menuItem) => {
         menuItem
@@ -526,25 +1002,17 @@ export class MillerNavView extends ItemView {
   }
 
   private async createNote(folderPath: string): Promise<void> {
-    const savedExpanded = new Set(this.expandedFolders);
-
     const folder = folderPath === '/' ? '' : folderPath;
     const newPath = `${folder}/Untitled.md`.replace(/^\//, '');
     const file = await this.app.vault.create(newPath, '');
     await this.app.workspace.getLeaf().openFile(file);
-
-    this.expandedFolders = savedExpanded;
     await this.renderAllColumns();
   }
 
   private async createFolder(parentPath: string): Promise<void> {
-    const savedExpanded = new Set(this.expandedFolders);
-
     const parent = parentPath === '/' ? '' : parentPath;
     const newPath = `${parent}/New Folder`.replace(/^\//, '');
     await this.app.vault.createFolder(newPath);
-
-    this.expandedFolders = savedExpanded;
     await this.renderAllColumns();
   }
 
@@ -553,53 +1021,49 @@ export class MillerNavView extends ItemView {
   }
 
   private async deleteItem(path: string): Promise<void> {
-    const savedExpanded = new Set(this.expandedFolders);
-
     const file = this.app.vault.getAbstractFileByPath(path);
-    if (file) {
-      await this.app.vault.trash(file, true);
-    }
+    if (!file) return;
 
-    this.expandedFolders = savedExpanded;
-    await this.renderAllColumns();
+    const itemName = path.split('/').pop() ?? path;
+
+    const doDelete = async () => {
+      await this.app.vault.trash(file, true);
+      await this.renderAllColumns();
+    };
+
+    if (this.plugin.settings.confirmBeforeDelete) {
+      new DeleteConfirmModal(this.app, [itemName], doDelete).open();
+    } else {
+      await doDelete();
+    }
   }
 
-  /**
-   * Refresh the view (preserves expansion state)
-   */
   async refresh(): Promise<void> {
     await this.renderAllColumns();
   }
 
-  /**
-   * Collapse all folders
-   */
   collapseAll(): void {
-    this.expandedFolders.clear();
-    this.columns = [{ folderPath: '/' }];
+    for (const col of this.columns) {
+      col.expandedFolders.clear();
+    }
+    this.columns = [this.columns[0]];
+    this.columns[0].selectedItem = undefined;
     this.renderAllColumns();
   }
 
-  /**
-   * Navigate to a path
-   */
   async navigateTo(path: string): Promise<void> {
-    // Expand all parent folders
     const parts = path.split('/');
     let currentPath = '';
     for (const part of parts) {
       currentPath = currentPath ? `${currentPath}/${part}` : part;
       if (currentPath) {
-        this.expandedFolders.add(currentPath);
+        this.columns[0].expandedFolders.add(currentPath);
       }
     }
-    this.expandedFolders.add('/');
+    this.columns[0].expandedFolders.add('/');
     await this.renderAllColumns();
   }
 
-  /**
-   * Reveal a file in the navigator
-   */
   async revealFile(file: TFile): Promise<void> {
     await this.navigateTo(file.parent?.path ?? '/');
   }

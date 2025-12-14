@@ -3,4 +3,4 @@
  */
 
 export { DragDropHandler } from './DragDropHandler';
-export { showContextMenu } from './ContextMenuHandler';
+export { showContextMenu } from './contextMenu';

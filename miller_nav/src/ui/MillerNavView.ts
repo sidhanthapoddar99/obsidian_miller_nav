@@ -7,7 +7,8 @@ import { MILLER_NAV_VIEW, PaneItem } from '../types';
 import type MillerNavPlugin from '../main';
 import type { ColumnState, ViewCallbacks, ViewState } from './types';
 import { renderColumnHeader, renderColumnFooter, renderCollapsedColumn, renderItem } from './components';
-import { DragDropHandler, showContextMenu } from './handlers';
+import { DragDropHandler } from './handlers';
+import { showContextMenu } from './handlers/contextMenu';
 import { DeleteConfirmModal, RenameModal } from './modals';
 import { findItemByPath, normalizePath, buildPath, FileOperations } from './utils';
 

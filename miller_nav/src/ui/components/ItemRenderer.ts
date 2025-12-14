@@ -211,12 +211,29 @@ function setupClickHandler(
 ): void {
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isModifierPressed = e.ctrlKey || e.metaKey;
+    const isCtrlModifier = e.ctrlKey || e.metaKey;
+    const isShiftModifier = e.shiftKey;
 
-    if (isModifierPressed && item.type !== 'virtual') {
+    if (item.type === 'virtual') {
+      // Virtual items don't support multi-selection
+      callbacks.handleItemClick(item.path, item.type, columnIndex);
+      return;
+    }
+
+    if (isShiftModifier) {
+      // Shift+Click: Range selection
+      const lastSelected = callbacks.getLastSelectedPath();
+      if (lastSelected) {
+        callbacks.selectRange(lastSelected, item.path, columnIndex);
+      } else {
+        // No previous selection, just select this item
+        callbacks.toggleItemSelection(item.path, false);
+      }
+    } else if (isCtrlModifier) {
+      // Ctrl+Click: Toggle individual selection
       callbacks.toggleItemSelection(item.path, true);
     } else {
-      // Don't call clearSelection() here - handleItemClick will manage state
+      // Normal click: Clear selection and navigate
       callbacks.handleItemClick(item.path, item.type, columnIndex);
     }
   });

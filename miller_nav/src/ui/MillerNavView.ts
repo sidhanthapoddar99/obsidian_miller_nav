@@ -18,6 +18,7 @@ export class MillerNavView extends ItemView {
   private columnsContainer: HTMLElement;
   private columns: ColumnState[] = [{ folderPath: '/', expandedFolders: new Set(), isCollapsed: false }];
   private selectedItems: Set<string> = new Set();
+  private lastSelectedPath: string | null = null; // Anchor point for shift+click range selection
   private dragHandler: DragDropHandler;
   private fileOps: FileOperations;
   private autoRevealActive: boolean = false;
@@ -101,6 +102,8 @@ export class MillerNavView extends ItemView {
         renameItem: (path) => this.renameItem(path),
         clearSelection: () => this.clearSelection(),
         toggleItemSelection: (path, add) => this.toggleItemSelection(path, add),
+        selectRange: (from, to, col) => this.selectRange(from, to, col),
+        getLastSelectedPath: () => this.lastSelectedPath,
         addMarkedFolder: (path) => this.plugin.dataManager.addMarkedFolder(path),
         removeMarkedFolder: (path) => this.plugin.dataManager.removeMarkedFolder(path),
         getActiveFilePath: () => this.activeFilePath,
@@ -154,7 +157,65 @@ export class MillerNavView extends ItemView {
       this.selectedItems.clear();
       this.selectedItems.add(path);
     }
+    // Track last selected for shift+click range selection
+    this.lastSelectedPath = path;
     // Use targeted update instead of full re-render
+    this.updateSelectionVisuals(oldSelection, this.selectedItems);
+  }
+
+  private selectRange(fromPath: string, toPath: string, columnIndex: number): void {
+    const oldSelection = new Set(this.selectedItems);
+
+    // Get all items in the current column
+    const column = this.columns[columnIndex];
+    if (!column) return;
+
+    // Build list of all visible items in the column
+    const allItems: string[] = [];
+    const folder = this.app.vault.getAbstractFileByPath(column.folderPath);
+    if (!folder || !(folder instanceof TFolder)) return;
+
+    // Collect all visible items (files and folders)
+    const collectItems = (parentFolder: TFolder, depth: number = 0) => {
+      const children = parentFolder.children.sort((a, b) => {
+        // Folders first, then files, alphabetically
+        if (a instanceof TFolder && !(b instanceof TFolder)) return -1;
+        if (!(a instanceof TFolder) && b instanceof TFolder) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      for (const child of children) {
+        // Skip excluded folders
+        if (this.plugin.settings.excludedFolders.some(pattern => child.path.includes(pattern))) {
+          continue;
+        }
+
+        allItems.push(child.path);
+
+        // If folder is expanded, add its children
+        if (child instanceof TFolder && column.expandedFolders.has(child.path)) {
+          collectItems(child, depth + 1);
+        }
+      }
+    };
+
+    collectItems(folder);
+
+    // Find indices of from and to items
+    const fromIndex = allItems.indexOf(fromPath);
+    const toIndex = allItems.indexOf(toPath);
+
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    // Select all items in range
+    const startIndex = Math.min(fromIndex, toIndex);
+    const endIndex = Math.max(fromIndex, toIndex);
+
+    for (let i = startIndex; i <= endIndex; i++) {
+      this.selectedItems.add(allItems[i]);
+    }
+
+    // Update visuals
     this.updateSelectionVisuals(oldSelection, this.selectedItems);
   }
 

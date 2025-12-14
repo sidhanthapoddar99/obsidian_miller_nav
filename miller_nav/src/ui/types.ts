@@ -50,6 +50,8 @@ export interface ViewCallbacks {
   renameItem: (path: string) => void;
   clearSelection: () => void;
   toggleItemSelection: (path: string, addToSelection: boolean) => void;
+  selectRange: (fromPath: string, toPath: string, columnIndex: number) => void;
+  getLastSelectedPath: () => string | null;
   addMarkedFolder: (path: string) => void;
   removeMarkedFolder: (path: string) => void;
   getActiveFilePath: () => string | null;

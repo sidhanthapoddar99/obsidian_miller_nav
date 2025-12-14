@@ -44,7 +44,7 @@
 |---------|-------------|--------|
 | Toolbar | Collapse/Refresh/New buttons | ✅ Done |
 | Pane Component | Individual column rendering | ✅ Done |
-| Context Menus | Right-click actions | ✅ Done |
+| Context Menus | Comprehensive right-click menu system (see Context Menu System section below) | ✅ Done |
 | Note Count Badge | Show file count on folders | ✅ Done |
 
 ### Drag & Drop
@@ -59,6 +59,7 @@
 | Feature | Description | Status |
 |---------|-------------|--------|
 | Ctrl/Cmd+Click | Toggle item selection | ✅ Done |
+| Shift+Click | Range selection (select all items between anchor and target) | ✅ Done |
 | Selection Highlight | Visual indicator for selected items | ✅ Done |
 | Bulk Actions | Context menu actions on multiple items | ✅ Done |
 | Clear Selection | Click elsewhere to deselect | ✅ Done |
@@ -100,6 +101,25 @@
 | Feature | Description | Status |
 |---------|-------------|--------|
 | Duplicate Panel Fix | Fixed issue where right-click caused duplicate columns due to double event handlers | ✅ Done |
+
+### Context Menu System (December 15, 2025)
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Modular Architecture | Context menu split into separate files by functionality (fileMenuItems, folderMenuItems, bulkMenuItems) | ✅ Done |
+| Comprehensive File Menu | 20+ file operations including open options, duplicating, clipboard operations, system integration | ✅ Done |
+| Comprehensive Folder Menu | 20+ folder operations including subfolder marking, creation options, folder operations, system integration | ✅ Done |
+| Opening Options | Open in new tab, open to right, open in new window | ✅ Done |
+| File Operations | Duplicate files, move file to, copy/cut (planned), merge (planned) | ✅ Done |
+| Folder Operations | Create note/folder/canvas/base, duplicate (planned), move, search (planned), copy/cut (planned) | ✅ Done |
+| Clipboard Operations | Copy Obsidian URL, copy path, copy relative path | ✅ Done |
+| System Integration | Open in default app, show in system explorer | ✅ Done |
+| Bulk Operations | Multi-select actions for files and folders | ✅ Done |
+| Subfolder Bulk Actions | Set/remove subfolder marking for multiple folders at once | ✅ Done |
+| Create Folder with Selected | Create a new folder and move all selected items into it | ✅ Done |
+| Icon Customization (Planned) | Change icon, change icon color, remove icon - UI placeholders added | 🔲 Pending |
+| Folder Customization (Planned) | Change background color for folders - UI placeholder added | 🔲 Pending |
+| Password Protection (Planned) | Password protect files and folders - UI placeholder added | 🔲 Pending |
+| Add to Shortcuts (Planned) | Quick add files/folders to shortcuts section - UI placeholder added | 🔲 Pending |
 
 ---
 

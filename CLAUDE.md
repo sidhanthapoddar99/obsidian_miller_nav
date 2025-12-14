@@ -31,7 +31,7 @@
   4. Phase 4: Mobile support & performance optimization
   5. Phase 5: Polish, integrations, documentation
 
-refer to ./SRS.md for detailed requirements specification.
+Refer to [docs/SRS.md](docs/SRS.md) for detailed requirements specification.
 
 ## Reference Implementation
 
@@ -54,6 +54,11 @@ refer to ./SRS.md for detailed requirements specification.
   - `styles/` - CSS styles
   - `manifest.json` - Plugin manifest
   - `package.json` - npm dependencies
+- `docs/` - Documentation files
+  - `SRS.md` - Software Requirements Specification
+  - `features.md` - Feature tracking and status
+  - `refactoring_log.md` - Code refactoring history
+  - `TODO.md` - Planned features and tasks
 - `reference/notebook-navigator/` - Reference implementation (cloned from GitHub)
 
 ## Development Commands
@@ -73,7 +78,14 @@ npm run build     # Production build
 4. Reload Obsidian to see changes after rebuilding
 5. Location of the plugin foler is in @.env file under `OBSIDIAN_TEST_VAULT_PATH`
 
-# Updates 
+# Updates
 
-- After refactoring add the details in `refactoring_log.md` file -- keep code only where absolutely necessary else describe in table and words 
-- After adding/editing feature update `the features.md` 
+- After refactoring add the details in [docs/refactoring_log.md](docs/refactoring_log.md) file -- keep code only where absolutely necessary else describe in table and words
+- After adding/editing feature update [docs/features.md](docs/features.md)
+
+## Documentation
+
+- [docs/SRS.md](docs/SRS.md) - Software Requirements Specification
+- [docs/features.md](docs/features.md) - Feature tracking and status
+- [docs/refactoring_log.md](docs/refactoring_log.md) - Code refactoring history
+- [docs/TODO.md](docs/TODO.md) - Planned features and tasks 

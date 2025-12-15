@@ -3,6 +3,9 @@
 # Release artifacts (stored in GitHub Releases only)
 releases/
 
+# Reference implementations (external code)
+reference/
+
 # OS files
 .DS_Store
 Thumbs.db

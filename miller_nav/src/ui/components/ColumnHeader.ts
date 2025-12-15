@@ -13,8 +13,7 @@ export interface ColumnHeaderOptions {
   columnIndex: number;
   columnState: ColumnState;
   callbacks: ViewCallbacks;
-  autoRevealActive?: boolean;
-  onAutoRevealToggle?: () => void;
+  onManualReveal?: () => void;
   onSearch?: () => void;
   onSort?: () => void;
 }
@@ -25,8 +24,7 @@ export function renderColumnHeader(options: ColumnHeaderOptions): void {
     columnIndex,
     columnState,
     callbacks,
-    autoRevealActive = false,
-    onAutoRevealToggle,
+    onManualReveal,
     onSearch,
     onSort
   } = options;
@@ -50,14 +48,13 @@ export function renderColumnHeader(options: ColumnHeaderOptions): void {
   // Right side toolbar
   const toolbarEl = headerEl.createDiv({ cls: 'miller-nav-column-toolbar' });
 
-  // Primary nav only: Auto Reveal
-  if (isPrimary && onAutoRevealToggle) {
+  // Primary nav only: Manual Reveal
+  if (isPrimary && onManualReveal) {
     createToolbarButton({
       parent: toolbarEl,
       icon: 'crosshair',
-      ariaLabel: 'Auto reveal active file',
-      isActive: autoRevealActive,
-      onClick: onAutoRevealToggle
+      ariaLabel: 'Reveal active file',
+      onClick: onManualReveal
     });
   }
 

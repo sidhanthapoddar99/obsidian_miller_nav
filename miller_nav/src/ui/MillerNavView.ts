@@ -29,7 +29,6 @@ export class MillerNavView extends ItemView {
   private fileOps: FileOperations;
 
   // View state
-  private autoRevealActive: boolean = false;
   private activeFilePath: string | null = null;
   private cachedCallbacks: ViewCallbacks | null = null;
 
@@ -51,7 +50,6 @@ export class MillerNavView extends ItemView {
     this.fileOps = new FileOperations(this.app);
 
     // Initialize state
-    this.autoRevealActive = plugin.settings.autoRevealActiveNote;
     this.activeFilePath = this.app.workspace.getActiveFile()?.path ?? null;
   }
 
@@ -156,20 +154,13 @@ export class MillerNavView extends ItemView {
     return isMarked && columnIndex < this.plugin.settings.maxLevels;
   }
 
-  // ============ Auto Reveal ============
+  // ============ Manual Reveal ============
 
-  private toggleAutoReveal(): void {
-    this.autoRevealActive = !this.autoRevealActive;
-    this.plugin.settings.autoRevealActiveNote = this.autoRevealActive;
-    this.plugin.saveSettings();
-    this.renderAllColumns();
-
-    // If enabled, reveal current file
-    if (this.autoRevealActive) {
-      const activeFile = this.app.workspace.getActiveFile();
-      if (activeFile) {
-        this.revealFile(activeFile);
-      }
+  private manualRevealActiveFile(): void {
+    // Manually reveal the currently active file (one-time action)
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile) {
+      this.revealFile(activeFile);
     }
   }
 
@@ -323,8 +314,7 @@ export class MillerNavView extends ItemView {
       columnIndex,
       columnState,
       callbacks: this.getCallbacks(),
-      autoRevealActive: this.autoRevealActive,
-      onAutoRevealToggle: () => this.toggleAutoReveal(),
+      onManualReveal: () => this.manualRevealActiveFile(),
       onSearch: () => {
         // TODO: Implement search
       },

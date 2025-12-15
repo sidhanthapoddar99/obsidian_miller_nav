@@ -212,17 +212,12 @@ export default class MillerNavPlugin extends Plugin {
       })
     );
 
-    // Handle active file change
+    // Handle active file change - visual highlight only (no auto-reveal)
+    // Auto-reveal is now manual via the reveal button in the header
     this.registerEvent(
       this.app.workspace.on('file-open', (file) => {
-        if (!this.isUnloading && file && this.settings.autoRevealActiveNote) {
-          // Debounce to avoid rapid updates
-          setTimeout(() => {
-            if (!this.isUnloading) {
-              this.revealFile(file);
-            }
-          }, 100);
-        }
+        // The MillerNavView handles visual highlighting of active file
+        // No automatic navigation/reveal happens here
       })
     );
   }

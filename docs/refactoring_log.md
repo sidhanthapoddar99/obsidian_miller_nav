@@ -197,3 +197,77 @@ Separated concerns into focused components:
 
 ### Build Status
 Build successful
+
+---
+
+## 2025-12-15 - Auto-Reveal Replaced with Manual Reveal
+
+### Problem Analysis
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| Disruptive auto-navigation | Auto-reveal continuously navigated to active file on every file switch | Interrupted user navigation workflow |
+| Toggle vs trigger confusion | Button functioned as toggle (on/off state) rather than one-time action | User expected single-click action |
+| Unwanted setting persistence | Setting stored in plugin config but not desired by user | Polluted settings |
+
+### Solution: Manual Single-Click Reveal
+
+Changed auto-reveal from continuous/toggle behavior to manual single-click trigger:
+- Removed automatic file-open event listener navigation
+- Changed button from toggle to one-time action button
+- Removed `autoRevealActiveNote` setting from plugin config
+- Kept visual active file highlighting (non-disruptive)
+
+### Changes Made
+
+#### 1. Removed Auto-Reveal Logic
+**File**: `src/main.ts:216-222`
+
+Removed automatic `revealFile()` call from `file-open` event handler. Event still registered but only for visual highlighting handled by MillerNavView.
+
+#### 2. Toggle to Manual Trigger
+**File**: `src/ui/MillerNavView.ts`
+
+| Before | After |
+|--------|-------|
+| `toggleAutoReveal()` - toggles setting on/off | `manualRevealActiveFile()` - one-time reveal action |
+| Stored `autoRevealActive` state | No state needed |
+| Button shows active/inactive state | Button is always clickable |
+
+#### 3. Updated Button Interface
+**File**: `src/ui/components/ColumnHeader.ts:11-18`
+
+Changed `ColumnHeaderOptions` interface:
+- Removed: `autoRevealActive?: boolean`
+- Removed: `onAutoRevealToggle?: () => void`
+- Added: `onManualReveal?: () => void`
+- Updated button label: "Auto reveal active file" → "Reveal active file"
+- Removed `isActive` state from button
+
+#### 4. Removed Setting
+**Files**: `src/types/index.ts`, `src/settings/SettingsTab.ts`
+
+Removed `autoRevealActiveNote: boolean` from:
+- `MillerNavSettings` interface
+- `DEFAULT_SETTINGS` object
+- Settings UI (removed toggle control)
+
+### User Experience Impact
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| File switching | Navigator auto-jumps to new file | Navigator stays where user left it |
+| Reveal action | Click button to toggle on/off | Click button to reveal once |
+| Visual feedback | Active file always highlighted | Active file always highlighted |
+| Navigation control | System controls navigation | User controls navigation |
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/main.ts` | Removed auto-reveal from file-open event (kept event for view's visual updates) |
+| `src/ui/MillerNavView.ts` | Replaced `toggleAutoReveal()` with `manualRevealActiveFile()`, removed state |
+| `src/ui/components/ColumnHeader.ts` | Changed interface from toggle to action button |
+| `src/types/index.ts` | Removed `autoRevealActiveNote` from settings |
+| `src/settings/SettingsTab.ts` | Removed auto-reveal toggle from UI |
+
+### Build Status
+Build successful

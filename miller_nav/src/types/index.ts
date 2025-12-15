@@ -17,7 +17,6 @@ export interface MillerNavSettings {
 
   // Startup
   defaultView: 'navigation' | 'list';
-  autoRevealActiveNote: boolean;
   homepage: string | null;
   mobileHomepage: string | null;
 
@@ -159,7 +158,6 @@ export const DEFAULT_SETTINGS: MillerNavSettings = {
   maxLevels: 3,
 
   defaultView: 'navigation',
-  autoRevealActiveNote: true,
   homepage: null,
   mobileHomepage: null,
 

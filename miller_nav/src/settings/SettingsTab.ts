@@ -71,18 +71,6 @@ export class MillerNavSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Auto-reveal active note')
-      .setDesc('Automatically reveal the current note in the navigator')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.autoRevealActiveNote)
-          .onChange(async (value) => {
-            this.plugin.settings.autoRevealActiveNote = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
       .setName('Confirm before deleting')
       .setDesc('Show confirmation dialog before deleting files or folders')
       .addToggle((toggle) =>

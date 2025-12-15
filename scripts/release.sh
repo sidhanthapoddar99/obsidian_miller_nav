@@ -244,8 +244,8 @@ commit_and_tag() {
     # Add version files only (releases/ is in .gitignore)
     git add "$MANIFEST_PATH" "$PACKAGE_PATH"
 
-    # Commit
-    git commit -m "Release v${VERSION}
+    # Commit (allow empty if version hasn't changed)
+    git commit --allow-empty -m "Release v${VERSION}
 
 - Updated version to ${VERSION}
 - Built and packaged release artifacts

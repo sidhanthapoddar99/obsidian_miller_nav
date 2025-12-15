@@ -61,11 +61,9 @@ Refer to [docs/SRS.md](docs/SRS.md) for detailed requirements specification.
   - `TODO.md` - Planned features and tasks
   - `RELEASE.md` - Release process guide
   - `RELEASE_QUICK_REF.md` - Release quick reference
-- `scripts/` - Automation scripts
-  - `release.sh` - Automated release script
-- `releases/` - Release artifacts (created during release)
+- `releases/` - Release artifacts (created during release, not in git)
   - `version{X}/` - Version-specific release files
-- `reference/notebook-navigator/` - Reference implementation (cloned from GitHub)
+- `reference/` - Reference implementations (not in git)
 
 ## Development Commands
 
@@ -108,20 +106,22 @@ cd miller_nav && npm run deploy
 
 ## Release Process
 
-**Quick method (automated):**
+**Interactive release skill:**
 ```bash
-/release  # Using Claude Code
-# or
-./scripts/release.sh 1.0.0
+/release  # Using Claude Code skill
 ```
 
-**What the release process does:**
-1. Updates version in `manifest.json` and `package.json`
-2. Builds production bundle
-3. Creates `releases/version{X}/` directory with artifacts
-4. Generates SHA256 checksums
-5. Creates git tag and pushes to GitHub
-6. Creates GitHub release with downloadable assets
+This launches an interactive release workflow that guides you through:
+1. Version number selection and validation
+2. Prerequisite verification (gh CLI, jq, git status)
+3. Version file updates (`manifest.json`, `package.json`)
+4. Production build (`npm run build`)
+5. Artifact packaging (creates `releases/version{X}/` with ZIP)
+6. Checksum generation (SHA256)
+7. Git commit and tag creation
+8. Push confirmation and execution
+9. GitHub release creation
+10. Obsidian Community Plugin submission guidance
 
 **Prerequisites:**
 - GitHub CLI (`gh`) installed and authenticated
@@ -131,6 +131,7 @@ cd miller_nav && npm run deploy
 **Documentation:**
 - [docs/RELEASE.md](docs/RELEASE.md) - Complete release guide
 - [docs/RELEASE_QUICK_REF.md](docs/RELEASE_QUICK_REF.md) - Quick reference
+- [.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md) - Interactive skill guide
 
 # Updates
 

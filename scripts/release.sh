@@ -241,8 +241,8 @@ sha256sum -c SHA256SUMS
 commit_and_tag() {
     print_step "Committing changes and creating git tag..."
 
-    # Add version files and release directory
-    git add "$MANIFEST_PATH" "$PACKAGE_PATH" "$RELEASES_DIR/"
+    # Add version files only (releases/ is in .gitignore)
+    git add "$MANIFEST_PATH" "$PACKAGE_PATH"
 
     # Commit
     git commit -m "Release v${VERSION}

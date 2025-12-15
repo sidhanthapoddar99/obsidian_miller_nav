@@ -5,22 +5,30 @@
 import { ItemView, WorkspaceLeaf, TFolder, TFile, Platform } from 'obsidian';
 import { MILLER_NAV_VIEW, PaneItem } from '../types';
 import type MillerNavPlugin from '../main';
-import type { ColumnState, ViewCallbacks, ViewState } from './types';
+import type { ViewCallbacks, ViewState } from './types';
 import { renderColumnHeader, renderColumnFooter, renderCollapsedColumn, renderItem } from './components';
 import { DragDropHandler } from './handlers';
 import { showContextMenu } from './handlers/contextMenu';
 import { DeleteConfirmModal, RenameModal } from './modals';
-import { findItemByPath, normalizePath, buildPath, FileOperations } from './utils';
+import { FileOperations } from './utils';
+import { ColumnManager, SelectionManager } from './managers';
+import { ItemDataProvider } from './providers';
 
 export class MillerNavView extends ItemView {
   plugin: MillerNavPlugin;
   private containerEl_: HTMLElement;
   private columnsContainer: HTMLElement;
-  private columns: ColumnState[] = [{ folderPath: '/', expandedFolders: new Set(), isCollapsed: false }];
-  private selectedItems: Set<string> = new Set();
-  private lastSelectedPath: string | null = null; // Anchor point for shift+click range selection
+
+  // Extracted managers
+  private columnManager: ColumnManager;
+  private selectionManager: SelectionManager;
+  private itemDataProvider: ItemDataProvider;
+
+  // Handlers
   private dragHandler: DragDropHandler;
   private fileOps: FileOperations;
+
+  // View state
   private autoRevealActive: boolean = false;
   private activeFilePath: string | null = null;
   private cachedCallbacks: ViewCallbacks | null = null;
@@ -28,8 +36,21 @@ export class MillerNavView extends ItemView {
   constructor(leaf: WorkspaceLeaf, plugin: MillerNavPlugin) {
     super(leaf);
     this.plugin = plugin;
+
+    // Initialize managers
+    this.columnManager = new ColumnManager();
+    this.selectionManager = new SelectionManager();
+    this.itemDataProvider = new ItemDataProvider(
+      this.app.vault,
+      this.plugin.dataManager,
+      this.plugin.settings
+    );
+
+    // Initialize handlers
     this.dragHandler = new DragDropHandler(this.app);
     this.fileOps = new FileOperations(this.app);
+
+    // Initialize state
     this.autoRevealActive = plugin.settings.autoRevealActiveNote;
     this.activeFilePath = this.app.workspace.getActiveFile()?.path ?? null;
   }
@@ -69,7 +90,7 @@ export class MillerNavView extends ItemView {
         const oldPath = this.activeFilePath;
         this.activeFilePath = file?.path ?? null;
         // Use targeted update instead of full re-render
-        this.updateActiveFileVisual(oldPath, this.activeFilePath);
+        SelectionManager.updateActiveFileVisual(this.columnsContainer, oldPath, this.activeFilePath);
       })
     );
 
@@ -87,16 +108,31 @@ export class MillerNavView extends ItemView {
     if (!this.cachedCallbacks) {
       this.cachedCallbacks = {
         renderAllColumns: () => this.renderAllColumns(),
-        toggleColumnCollapse: (i) => this.toggleColumnCollapse(i),
-        collapseColumnTree: (i) => this.collapseColumnTree(i),
+        toggleColumnCollapse: (i) => {
+          this.columnManager.toggleCollapse(i);
+          this.renderAllColumns();
+        },
+        collapseColumnTree: (i) => {
+          this.columnManager.collapseTree(i);
+          this.renderAllColumns();
+        },
         collapseAll: () => this.collapseAll(),
-        closeColumnsFrom: (i) => this.closeColumnsFrom(i),
+        closeColumnsFrom: (i) => {
+          this.columnManager.closeFrom(i);
+          this.renderAllColumns();
+        },
         createNote: (path) => this.createNote(path),
         createFolder: (path) => this.createFolder(path),
         createCanvas: (path) => this.createCanvas(path),
         createBase: (path) => this.createBase(path),
-        openSubfolderColumn: (path, i) => this.openSubfolderColumn(path, i),
-        toggleExpand: (path, i) => this.toggleExpand(path, i),
+        openSubfolderColumn: (path, i) => {
+          this.columnManager.openSubfolder(path, i);
+          this.renderAllColumns();
+        },
+        toggleExpand: (path, i) => {
+          this.columnManager.toggleExpand(path, i);
+          this.renderAllColumns();
+        },
         handleItemClick: (path, type, i) => this.handleItemClick(path, type, i),
         moveItems: (paths, target) => this.moveItems(paths, target),
         deleteItem: (path) => this.deleteItem(path),
@@ -104,7 +140,7 @@ export class MillerNavView extends ItemView {
         clearSelection: () => this.clearSelection(),
         toggleItemSelection: (path, add) => this.toggleItemSelection(path, add),
         selectRange: (from, to, col) => this.selectRange(from, to, col),
-        getLastSelectedPath: () => this.lastSelectedPath,
+        getLastSelectedPath: () => this.selectionManager.lastSelectedPath,
         addMarkedFolder: (path) => this.plugin.dataManager.addMarkedFolder(path),
         removeMarkedFolder: (path) => this.plugin.dataManager.removeMarkedFolder(path),
         getActiveFilePath: () => this.activeFilePath,
@@ -140,196 +176,39 @@ export class MillerNavView extends ItemView {
   // ============ Selection ============
 
   private clearSelection(): void {
-    const oldSelection = new Set(this.selectedItems);
-    this.selectedItems.clear();
-    // Use targeted update instead of full re-render
-    this.updateSelectionVisuals(oldSelection, this.selectedItems);
+    const oldSelection = this.selectionManager.clear();
+    SelectionManager.updateVisuals(this.columnsContainer, oldSelection, this.selectionManager.selectedItems);
   }
 
   private toggleItemSelection(path: string, addToSelection: boolean): void {
-    const oldSelection = new Set(this.selectedItems);
-    if (addToSelection) {
-      if (this.selectedItems.has(path)) {
-        this.selectedItems.delete(path);
-      } else {
-        this.selectedItems.add(path);
-      }
-    } else {
-      this.selectedItems.clear();
-      this.selectedItems.add(path);
-    }
-    // Track last selected for shift+click range selection
-    this.lastSelectedPath = path;
-    // Use targeted update instead of full re-render
-    this.updateSelectionVisuals(oldSelection, this.selectedItems);
+    const result = this.selectionManager.toggle(path, addToSelection);
+    SelectionManager.updateVisuals(this.columnsContainer, result.old, result.new);
   }
 
   private selectRange(fromPath: string, toPath: string, columnIndex: number): void {
-    const oldSelection = new Set(this.selectedItems);
-
-    // Get all items in the current column
-    const column = this.columns[columnIndex];
+    // Get visible items for the column
+    const column = this.columnManager.getColumn(columnIndex);
     if (!column) return;
 
-    // Build list of all visible items in the column
-    const allItems: string[] = [];
-    const folder = this.app.vault.getAbstractFileByPath(column.folderPath);
-    if (!folder || !(folder instanceof TFolder)) return;
+    const visibleItems = this.itemDataProvider.getVisibleItemsInColumn(
+      column.folderPath,
+      column.expandedFolders,
+      (path) => this.shouldOpenHorizontally(path, columnIndex)
+    );
 
-    // Collect all visible items (files and folders)
-    const collectItems = (parentFolder: TFolder, depth: number = 0) => {
-      const children = parentFolder.children.sort((a, b) => {
-        // Folders first, then files, alphabetically
-        if (a instanceof TFolder && !(b instanceof TFolder)) return -1;
-        if (!(a instanceof TFolder) && b instanceof TFolder) return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-      for (const child of children) {
-        // Skip excluded folders
-        if (this.plugin.settings.excludedFolders.some(pattern => child.path.includes(pattern))) {
-          continue;
-        }
-
-        allItems.push(child.path);
-
-        // If folder is expanded, add its children
-        if (child instanceof TFolder && column.expandedFolders.has(child.path)) {
-          collectItems(child, depth + 1);
-        }
-      }
-    };
-
-    collectItems(folder);
-
-    // Find indices of from and to items
-    const fromIndex = allItems.indexOf(fromPath);
-    const toIndex = allItems.indexOf(toPath);
-
-    if (fromIndex === -1 || toIndex === -1) return;
-
-    // Select all items in range
-    const startIndex = Math.min(fromIndex, toIndex);
-    const endIndex = Math.max(fromIndex, toIndex);
-
-    for (let i = startIndex; i <= endIndex; i++) {
-      this.selectedItems.add(allItems[i]);
-    }
-
-    // Update visuals
-    this.updateSelectionVisuals(oldSelection, this.selectedItems);
-  }
-
-  // ============ Targeted Visual Updates ============
-
-  /**
-   * Update only selection-related CSS classes without full re-render
-   */
-  private updateSelectionVisuals(oldSelection: Set<string>, newSelection: Set<string>): void {
-    // Remove selection from items no longer selected
-    for (const path of oldSelection) {
-      if (!newSelection.has(path)) {
-        const el = findItemByPath(this.columnsContainer, path);
-        if (el) el.removeClass('is-multi-selected');
-      }
-    }
-    // Add selection to newly selected items
-    for (const path of newSelection) {
-      if (!oldSelection.has(path)) {
-        const el = findItemByPath(this.columnsContainer, path);
-        if (el) el.addClass('is-multi-selected');
-      }
-    }
-  }
-
-  /**
-   * Update only active file CSS class without full re-render
-   */
-  private updateActiveFileVisual(oldPath: string | null, newPath: string | null): void {
-    if (oldPath) {
-      const oldEl = findItemByPath(this.columnsContainer, oldPath);
-      if (oldEl) oldEl.removeClass('is-active-file');
-    }
-    if (newPath) {
-      const newEl = findItemByPath(this.columnsContainer, newPath);
-      if (newEl) newEl.addClass('is-active-file');
-    }
-  }
-
-  // ============ Column Management ============
-
-  private toggleColumnCollapse(columnIndex: number): void {
-    this.columns[columnIndex].isCollapsed = !this.columns[columnIndex].isCollapsed;
-    this.renderAllColumns();
-  }
-
-  private collapseColumnTree(columnIndex: number): void {
-    this.columns[columnIndex].expandedFolders.clear();
-    this.renderAllColumns();
-  }
-
-  private closeColumnsFrom(columnIndex: number): void {
-    if (columnIndex > 0 && this.columns[columnIndex - 1]) {
-      this.columns[columnIndex - 1].selectedItem = undefined;
-    }
-    this.columns = this.columns.slice(0, columnIndex);
-    this.renderAllColumns();
-  }
-
-  private openSubfolderColumn(folderPath: string, fromColumnIndex: number): void {
-    const normalizedPath = normalizePath(folderPath);
-
-    // Check if column for this folder already exists at any position
-    const existingIndex = this.columns.findIndex(col => col.folderPath === normalizedPath);
-    if (existingIndex !== -1) {
-      // Column already exists - if it's after our current position, just reveal it
-      if (existingIndex > fromColumnIndex) {
-        // Column exists to the right, no action needed
-        return;
-      }
-      // Column exists but at or before current position, don't duplicate
-      return;
-    }
-
-    // Check if column already exists at the position we'd create
-    if (this.columns.length > fromColumnIndex + 1) {
-      if (this.columns[fromColumnIndex + 1]?.folderPath === normalizedPath) {
-        // Already have this column as the next one
-        return;
-      }
-    }
-
-    // Close any columns after the current one
-    this.columns = this.columns.slice(0, fromColumnIndex + 1);
-    this.columns[fromColumnIndex].selectedItem = normalizedPath;
-    this.columns.push({ folderPath: normalizedPath, expandedFolders: new Set(), isCollapsed: false });
-    this.renderAllColumns();
-  }
-
-  private toggleExpand(path: string, columnIndex: number): void {
-    const columnState = this.columns[columnIndex];
-    if (columnState.expandedFolders.has(path)) {
-      columnState.expandedFolders.delete(path);
-    } else {
-      columnState.expandedFolders.add(path);
-    }
-    this.renderAllColumns();
+    const result = this.selectionManager.selectRange(fromPath, toPath, visibleItems);
+    SelectionManager.updateVisuals(this.columnsContainer, result.old, result.new);
   }
 
   // ============ Item Actions ============
 
   private handleItemClick(path: string, type: string, columnIndex: number): void {
     // Clear multi-selection when clicking normally
-    this.selectedItems.clear();
+    const oldSelection = this.selectionManager.clear();
+    SelectionManager.updateVisuals(this.columnsContainer, oldSelection, this.selectionManager.selectedItems);
 
     // Close columns to the right when clicking in an earlier column
-    if (columnIndex < this.columns.length - 1) {
-      // Clear the selected item of current column if clicking something different
-      if (this.columns[columnIndex].selectedItem !== path) {
-        this.columns = this.columns.slice(0, columnIndex + 1);
-        this.columns[columnIndex].selectedItem = undefined;
-      }
-    }
+    this.columnManager.closeColumnsToRight(columnIndex, path);
 
     if (type === 'file') {
       const file = this.app.vault.getAbstractFileByPath(path);
@@ -339,9 +218,11 @@ export class MillerNavView extends ItemView {
       this.renderAllColumns();
     } else if (type === 'folder') {
       if (this.shouldOpenHorizontally(path, columnIndex)) {
-        this.openSubfolderColumn(path, columnIndex);
+        this.columnManager.openSubfolder(path, columnIndex);
+        this.renderAllColumns();
       } else {
-        this.toggleExpand(path, columnIndex);
+        this.columnManager.toggleExpand(path, columnIndex);
+        this.renderAllColumns();
       }
     }
   }
@@ -393,7 +274,7 @@ export class MillerNavView extends ItemView {
     await this.dragHandler.moveItems(
       itemPaths,
       targetFolderPath,
-      this.selectedItems,
+      this.selectionManager.selectedItems,
       () => this.renderAllColumns()
     );
   }
@@ -401,14 +282,18 @@ export class MillerNavView extends ItemView {
   // ============ Rendering ============
 
   private async renderAllColumns(): Promise<void> {
+    // Update settings reference in case they changed
+    this.itemDataProvider.updateSettings(this.plugin.settings);
+
     this.columnsContainer.empty();
-    for (let i = 0; i < this.columns.length; i++) {
+    const columns = this.columnManager.getColumns();
+    for (let i = 0; i < columns.length; i++) {
       await this.renderColumn(i);
     }
   }
 
   private async renderColumn(columnIndex: number): Promise<void> {
-    const columnState = this.columns[columnIndex];
+    const columnState = this.columnManager.getColumn(columnIndex)!;
     const columnEl = this.columnsContainer.createDiv({
       cls: `miller-nav-column ${columnState.isCollapsed ? 'is-collapsed' : ''}`
     });
@@ -418,7 +303,7 @@ export class MillerNavView extends ItemView {
     this.dragHandler.setupColumnDropTarget(
       columnEl,
       columnIndex,
-      this.columns,
+      this.columnManager.getColumns(),
       (paths, target) => this.moveItems(paths, target)
     );
 
@@ -462,7 +347,7 @@ export class MillerNavView extends ItemView {
   }
 
   private async renderRootColumn(listEl: HTMLElement, columnIndex: number): Promise<void> {
-    const virtualItems = this.getVirtualItems();
+    const virtualItems = this.itemDataProvider.getVirtualItems();
     for (const item of virtualItems) {
       this.renderItemElement(listEl, item, 0, columnIndex);
     }
@@ -480,54 +365,9 @@ export class MillerNavView extends ItemView {
     };
     this.renderItemElement(listEl, rootItem, 0, columnIndex);
 
-    if (this.columns[columnIndex].expandedFolders.has('/')) {
+    if (this.columnManager.isExpanded('/', columnIndex)) {
       await this.renderFolderChildren(listEl, '/', 1, columnIndex);
     }
-  }
-
-  private getVirtualItems(): PaneItem[] {
-    const items: PaneItem[] = [];
-
-    if (this.plugin.settings.showRecentNotes) {
-      items.push({
-        id: 'virtual-recent',
-        type: 'virtual',
-        name: 'Recent',
-        path: '__recent__',
-        level: 0,
-        virtualType: 'recent',
-        icon: 'clock',
-        hasChildren: false,
-      });
-    }
-
-    if (this.plugin.settings.showTags) {
-      items.push({
-        id: 'virtual-tags',
-        type: 'virtual',
-        name: 'Tags',
-        path: '__tags__',
-        level: 0,
-        virtualType: 'tags',
-        icon: 'tag',
-        hasChildren: false,
-      });
-    }
-
-    if (this.plugin.settings.showShortcuts) {
-      items.push({
-        id: 'virtual-shortcuts',
-        type: 'virtual',
-        name: 'Shortcuts',
-        path: '__shortcuts__',
-        level: 0,
-        virtualType: 'shortcuts',
-        icon: 'star',
-        hasChildren: false,
-      });
-    }
-
-    return items;
   }
 
   private async renderSubfolderColumn(listEl: HTMLElement, folderPath: string, columnIndex: number): Promise<void> {
@@ -548,106 +388,26 @@ export class MillerNavView extends ItemView {
 
     if (!(folder instanceof TFolder)) return;
 
-    const items = this.getFolderItems(folder, indent);
+    const items = this.itemDataProvider.getFolderItems(folder, indent);
 
     if (items.length === 0 && indent === 0) {
       listEl.createDiv({ cls: 'miller-nav-empty', text: 'Empty folder' });
       return;
     }
 
-    const columnState = this.columns[columnIndex];
-
     for (const item of items) {
       this.renderItemElement(listEl, item, indent, columnIndex);
 
       if (item.type === 'folder' &&
           !this.shouldOpenHorizontally(item.path, columnIndex) &&
-          columnState.expandedFolders.has(item.path)) {
+          this.columnManager.isExpanded(item.path, columnIndex)) {
         await this.renderFolderChildren(listEl, item.path, indent + 1, columnIndex);
       }
     }
   }
 
-  private getFolderItems(folder: TFolder, indent: number): PaneItem[] {
-    const items: PaneItem[] = [];
-    const ignoredExtensions = this.plugin.settings.ignoredExtensions.map(e => e.toLowerCase());
-    // Known Obsidian file types that get special icons
-    const knownExtensions: Record<string, string> = {
-      'md': 'file-text',
-      'canvas': 'layout-dashboard',
-      'base': 'database',
-      'pdf': 'file-type',
-      'png': 'image',
-      'jpg': 'image',
-      'jpeg': 'image',
-      'gif': 'image',
-      'svg': 'image',
-      'webp': 'image',
-      'mp3': 'music',
-      'wav': 'music',
-      'mp4': 'video',
-      'webm': 'video',
-    };
-
-    for (const child of folder.children) {
-      if (child instanceof TFolder) {
-        if (child.name.startsWith('.')) continue;
-
-        const isMarked = this.plugin.dataManager.isMarkedFolder(child.path);
-        const metadata = this.plugin.dataManager.getFolderMetadata(child.path);
-        const hasChildren = child.children.some((c) =>
-          (c instanceof TFolder && !c.name.startsWith('.')) ||
-          (c instanceof TFile)
-        );
-
-        items.push({
-          id: `folder-${child.path}`,
-          type: 'folder',
-          name: child.name,
-          path: child.path,
-          level: indent,
-          isMarked,
-          hasChildren,
-          icon: metadata?.icon ?? 'folder',
-          color: metadata?.color,
-          noteCount: this.plugin.settings.showNoteCount ? this.countNotes(child) : undefined,
-        });
-      } else if (child instanceof TFile) {
-        const ext = child.extension.toLowerCase();
-
-        // Skip ignored extensions
-        if (ignoredExtensions.includes(ext)) continue;
-
-        const isKnownType = ext in knownExtensions;
-        const icon = knownExtensions[ext] ?? 'file';
-
-        items.push({
-          id: `file-${child.path}`,
-          type: 'file',
-          name: child.basename,
-          path: child.path,
-          level: indent,
-          icon,
-          hasChildren: false,
-          // Only show extension label for unknown types
-          extension: isKnownType ? undefined : ext.toUpperCase(),
-        });
-      }
-    }
-
-    return items.sort((a, b) => {
-      if (a.type === 'folder' && b.type !== 'folder') return -1;
-      if (a.type !== 'folder' && b.type === 'folder') return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }
-
-  private countNotes(folder: TFolder): number {
-    return folder.children.filter(c => c instanceof TFile && c.extension === 'md').length;
-  }
-
   private renderItemElement(listEl: HTMLElement, item: PaneItem, indent: number, columnIndex: number): void {
-    const columnState = this.columns[columnIndex];
+    const columnState = this.columnManager.getColumn(columnIndex)!;
     const opensHorizontally = item.type === 'folder' && this.shouldOpenHorizontally(item.path, columnIndex);
     const isActiveFile = item.type === 'file' && item.path === this.activeFilePath;
 
@@ -657,7 +417,7 @@ export class MillerNavView extends ItemView {
       indent,
       columnIndex,
       columnState,
-      selectedItems: this.selectedItems,
+      selectedItems: this.selectionManager.selectedItems,
       opensHorizontally,
       isActiveFile,
       callbacks: this.getCallbacks(),
@@ -673,11 +433,12 @@ export class MillerNavView extends ItemView {
       e.stopPropagation();
 
       // Update selection state without full re-render
-      if (!this.selectedItems.has(item.path)) {
-        this.selectedItems.clear();
-        this.selectedItems.add(item.path);
+      if (!this.selectionManager.has(item.path)) {
+        const oldSel = new Set(this.selectionManager.selectedItems);
+        this.selectionManager.selectedItems.clear();
+        this.selectionManager.add(item.path);
         // Just update visual state of this element
-        el.addClass('is-multi-selected');
+        SelectionManager.updateVisuals(this.columnsContainer, oldSel, this.selectionManager.selectedItems);
       }
 
       showContextMenu({
@@ -685,7 +446,7 @@ export class MillerNavView extends ItemView {
         event: e,
         item,
         columnIndex,
-        selectedItems: this.selectedItems,
+        selectedItems: this.selectionManager.selectedItems,
         maxLevels: this.plugin.settings.maxLevels,
         confirmBeforeDelete: this.plugin.settings.confirmBeforeDelete,
         isMarkedFolder: (path) => this.plugin.dataManager.isMarkedFolder(path),
@@ -698,23 +459,13 @@ export class MillerNavView extends ItemView {
 
   getState(): ViewState {
     return {
-      columns: this.columns.map(col => ({
-        folderPath: col.folderPath,
-        selectedItem: col.selectedItem,
-        expandedFolders: Array.from(col.expandedFolders),
-        isCollapsed: col.isCollapsed
-      }))
+      columns: this.columnManager.serialize()
     };
   }
 
   async setState(state: Partial<ViewState>, result: { history: boolean }): Promise<void> {
     if (state.columns && state.columns.length > 0) {
-      this.columns = state.columns.map(col => ({
-        folderPath: col.folderPath,
-        selectedItem: col.selectedItem,
-        expandedFolders: new Set(col.expandedFolders ?? []),
-        isCollapsed: col.isCollapsed ?? false
-      }));
+      this.columnManager.deserialize(state.columns);
     }
     if (this.columnsContainer) {
       await this.renderAllColumns();
@@ -728,37 +479,14 @@ export class MillerNavView extends ItemView {
   }
 
   collapseAll(): void {
-    console.log('[MillerNav] collapseAll called', {
-      totalColumns: this.columns.length,
-      columnPaths: this.columns.map(c => c.folderPath)
-    });
-
-    // Collapse all tree folders
-    for (const col of this.columns) {
-      col.expandedFolders.clear();
-    }
-
-    // Collapse all secondary columns (keep them, but set isCollapsed = true)
-    for (let i = 1; i < this.columns.length; i++) {
-      this.columns[i].isCollapsed = true;
-      console.log('[MillerNav] Collapsed column', i, this.columns[i].folderPath);
-    }
-
-    // Keep column 0 expanded
-    this.columns[0].isCollapsed = false;
-    this.columns[0].selectedItem = undefined;
-
-    console.log('[MillerNav] After collapse, column states:',
-      this.columns.map((c, i) => ({ index: i, path: c.folderPath, isCollapsed: c.isCollapsed }))
-    );
-
+    this.columnManager.collapseAll();
     this.renderAllColumns();
   }
 
   async navigateTo(path: string): Promise<void> {
     // Reset to just root column
-    this.columns = [{ folderPath: '/', expandedFolders: new Set(), isCollapsed: false }];
-    this.columns[0].expandedFolders.add('/');
+    this.columnManager.reset();
+    this.columnManager.expandFolder('/', 0);
 
     if (!path || path === '/') {
       await this.renderAllColumns();
@@ -778,8 +506,9 @@ export class MillerNavView extends ItemView {
 
       if (shouldOpenHorizontal) {
         // Open as new column
-        this.columns[currentColumnIndex].selectedItem = currentPath;
-        this.columns.push({
+        this.columnManager.setSelectedItem(currentColumnIndex, currentPath);
+        const columns = this.columnManager.getColumns();
+        columns.push({
           folderPath: currentPath,
           expandedFolders: new Set(),
           isCollapsed: false
@@ -787,7 +516,7 @@ export class MillerNavView extends ItemView {
         currentColumnIndex++;
       } else {
         // Expand inline in current column
-        this.columns[currentColumnIndex].expandedFolders.add(currentPath);
+        this.columnManager.expandFolder(currentPath, currentColumnIndex);
       }
     }
 

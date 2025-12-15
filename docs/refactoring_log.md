@@ -68,3 +68,82 @@ Replaced 60+ lines of repetitive button creation with utility function calls.
 
 ### Build Status
 Build successful
+
+---
+
+## 2025-12-15 - MillerNavView Modularization
+
+### Problem Analysis
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| Monolithic view class | MillerNavView.ts was 820 lines with 9 distinct responsibilities | Hard to test, maintain, and understand |
+| Mixed concerns | Selection, column state, data transformation all in one file | Tight coupling, difficult to modify |
+| No separation of state | State management mixed with rendering logic | Changes to state logic required understanding rendering |
+
+### Solution: Manager/Provider Pattern
+
+Extracted three focused modules from MillerNavView.ts:
+
+| Module | Responsibility | Lines |
+|--------|---------------|-------|
+| `ColumnManager` | Column state (columns[], collapse/expand, open/close) | 238 |
+| `SelectionManager` | Selection state (selectedItems, toggle, range selection) | 176 |
+| `ItemDataProvider` | Data transformation (getFolderItems, getVirtualItems) | 220 |
+
+### Changes Made
+
+#### 1. SelectionManager (`src/ui/managers/SelectionManager.ts`)
+Manages multi-selection state with clean interface:
+- `selectedItems: Set<string>` - currently selected paths
+- `toggle(path, addToSelection)` - handles ctrl+click
+- `selectRange(from, to, visibleItems)` - handles shift+click
+- `updateVisuals()` - static method for targeted DOM updates
+
+#### 2. ColumnManager (`src/ui/managers/ColumnManager.ts`)
+Manages Miller column lifecycle:
+- `columns: ColumnState[]` - column array state
+- `toggleCollapse(index)` - collapse/expand column
+- `openSubfolder(path, fromIndex)` - add new column
+- `collapseAll()` - cascade collapse
+- `serialize()`/`deserialize()` - state persistence
+
+#### 3. ItemDataProvider (`src/ui/providers/ItemDataProvider.ts`)
+Pure data transformation (no state):
+- `getFolderItems(folder, indent)` - build PaneItem[] for folder
+- `getVirtualItems()` - build virtual folder items (Recent, Tags, Shortcuts)
+- `getVisibleItemsInColumn()` - for range selection
+- `KNOWN_EXTENSIONS` - centralized icon mapping
+
+#### 4. Simplified MillerNavView
+Now focused on orchestration:
+- Obsidian ItemView lifecycle
+- Wiring managers together
+- Rendering coordination (kept in view - it's the View's job)
+- Callback delegation to managers
+
+### Key Design Decisions
+
+1. **Keep rendering in View** - Rendering is the View's core responsibility; extracting it would over-abstract
+2. **Managers don't trigger renders** - They mutate state and return; View decides when to render
+3. **Pure data provider** - ItemDataProvider has no state, just transforms data
+4. **Static visual update methods** - `SelectionManager.updateVisuals()` decoupled from instance
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/ui/managers/ColumnManager.ts` | NEW - column state management |
+| `src/ui/managers/SelectionManager.ts` | NEW - selection state management |
+| `src/ui/managers/index.ts` | NEW - exports |
+| `src/ui/providers/ItemDataProvider.ts` | NEW - data transformation |
+| `src/ui/providers/index.ts` | NEW - exports |
+| `src/ui/MillerNavView.ts` | SIMPLIFIED - 820 → 549 lines (33% reduction) |
+
+### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| MillerNavView.ts lines | 820 | 549 |
+| Distinct responsibilities in view | 9 | 4 (lifecycle, callbacks, rendering, navigation) |
+| Testable units | 1 | 4 |
+
+### Build Status
+Build successful

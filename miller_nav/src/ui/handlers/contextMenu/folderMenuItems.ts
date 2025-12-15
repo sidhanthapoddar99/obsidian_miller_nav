@@ -5,19 +5,26 @@
 
 import { Menu, TFolder } from 'obsidian';
 import type { FolderMenuOptions } from './types';
+import {
+  addSharedShortcutSection,
+  addSharedClipboardOperations,
+  addSharedSystemOperations,
+  addSharedCustomization,
+  addSharedBasicOperations,
+} from './sharedSections';
 
 /**
  * Build complete folder context menu
  */
 export function buildFolderMenu(menu: Menu, options: FolderMenuOptions): void {
   addSubfolderMarking(menu, options);
-  addShortcutSection(menu, options);
+  addSharedShortcutSection(menu, { ...options, passwordProtectTitle: 'Password protect folder' });
   addCreationOptions(menu, options);
   addFolderOperations(menu, options);
-  addClipboardOperations(menu, options);
-  addSystemOperations(menu, options);
-  addCustomization(menu, options);
-  addBasicOperations(menu, options);
+  addSharedClipboardOperations(menu, options);
+  addSharedSystemOperations(menu, options);
+  addSharedCustomization(menu, { ...options, includeBackgroundColor: true });
+  addSharedBasicOperations(menu, options);
 }
 
 /**
@@ -41,33 +48,6 @@ function addSubfolderMarking(menu: Menu, options: FolderMenuOptions): void {
           callbacks.addMarkedFolder(item.path);
         }
         await callbacks.renderAllColumns();
-      });
-  });
-
-  menu.addSeparator();
-}
-
-/**
- * Shortcuts section (future implementation)
- */
-function addShortcutSection(menu: Menu, options: FolderMenuOptions): void {
-  menu.addItem((item) => {
-    item
-      .setTitle('Add to Shortcut')
-      .setIcon('star')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement add to shortcuts
-      });
-  });
-
-  menu.addItem((item) => {
-    item
-      .setTitle('Password protect folder')
-      .setIcon('lock')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement password protection
       });
   });
 
@@ -175,127 +155,4 @@ function addFolderOperations(menu: Menu, options: FolderMenuOptions): void {
   });
 
   menu.addSeparator();
-}
-
-/**
- * Clipboard operations
- */
-function addClipboardOperations(menu: Menu, options: FolderMenuOptions): void {
-  const { item } = options;
-
-  // Copy path
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Copy path')
-      .setIcon('copy')
-      .onClick(() => {
-        navigator.clipboard.writeText(item.path);
-      });
-  });
-
-  // Copy relative path
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Copy relative path')
-      .setIcon('copy')
-      .onClick(() => {
-        navigator.clipboard.writeText(item.path);
-      });
-  });
-
-  menu.addSeparator();
-}
-
-/**
- * System operations
- */
-function addSystemOperations(menu: Menu, options: FolderMenuOptions): void {
-  const { app, item } = options;
-  const folder = app.vault.getAbstractFileByPath(item.path);
-
-  if (!folder) return;
-
-  // Show in system explorer
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Show in system explorer')
-      .setIcon('folder-open')
-      .onClick(() => {
-        // @ts-ignore - showInFolder is an undocumented API
-        app.showInFolder(folder.path);
-      });
-  });
-
-  menu.addSeparator();
-}
-
-/**
- * Customization (MillerNav specific - future implementation)
- */
-function addCustomization(menu: Menu, options: FolderMenuOptions): void {
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Change icon')
-      .setIcon('image')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement icon picker
-      });
-  });
-
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Change icon color')
-      .setIcon('palette')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement color picker
-      });
-  });
-
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Remove icon')
-      .setIcon('x')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement remove icon
-      });
-  });
-
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Change background color')
-      .setIcon('palette')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement background color picker
-      });
-  });
-
-  menu.addSeparator();
-}
-
-/**
- * Basic operations (Rename, Delete)
- */
-function addBasicOperations(menu: Menu, options: FolderMenuOptions): void {
-  const { item, callbacks } = options;
-
-  // Rename
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Rename...')
-      .setIcon('pencil')
-      .onClick(() => callbacks.renameItem(item.path));
-  });
-
-  // Delete
-  menu.addItem((menuItem) => {
-    menuItem
-      .setTitle('Delete')
-      .setIcon('trash')
-      .setWarning(true)
-      .onClick(() => callbacks.deleteItem(item.path));
-  });
 }

@@ -147,3 +147,53 @@ Now focused on orchestration:
 
 ### Build Status
 Build successful
+
+---
+
+## 2025-12-15 - Context Menu & Component Refactoring
+
+### Problem Analysis
+| Issue | Description | Impact |
+|-------|-------------|--------|
+| Context menu duplication | ~100 lines of identical code between fileMenuItems.ts and folderMenuItems.ts | DRY violation, maintenance burden |
+| Mixed component concerns | ColumnHeader.ts contained both header and footer rendering | Single responsibility violation |
+
+### Solution: Shared Sections & Component Split
+
+#### 1. Shared Context Menu Sections (`src/ui/handlers/contextMenu/sharedSections.ts`)
+Extracted 5 shared functions used by both file and folder menus:
+
+| Function | Options | Purpose |
+|----------|---------|---------|
+| `addSharedShortcutSection()` | `passwordProtectTitle` | Add to Shortcut, Password protect |
+| `addSharedClipboardOperations()` | `includeObsidianUrl` | Copy path, Copy relative path, (optional) Copy Obsidian URL |
+| `addSharedSystemOperations()` | `includeOpenInDefaultApp` | Show in explorer, (optional) Open in default app |
+| `addSharedCustomization()` | `includeBackgroundColor` | Change icon/color, (optional) background color |
+| `addSharedBasicOperations()` | - | Rename, Delete |
+
+Each function accepts options with optional flags for file/folder-specific differences.
+
+#### 2. Split ColumnHeader/ColumnFooter
+Separated concerns into focused components:
+- `ColumnHeader.ts` - Header with title and toolbar buttons
+- `ColumnFooter.ts` - Footer with creation buttons (New note, folder, canvas, base)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/ui/handlers/contextMenu/sharedSections.ts` | NEW - shared menu sections (228 lines) |
+| `src/ui/handlers/contextMenu/fileMenuItems.ts` | SIMPLIFIED - 299 → 143 lines (52% reduction) |
+| `src/ui/handlers/contextMenu/folderMenuItems.ts` | SIMPLIFIED - 302 → 158 lines (48% reduction) |
+| `src/ui/components/ColumnFooter.ts` | NEW - extracted footer component (44 lines) |
+| `src/ui/components/ColumnHeader.ts` | SIMPLIFIED - 133 → 93 lines (30% reduction) |
+| `src/ui/components/index.ts` | Updated exports |
+
+### Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Context menu total lines | 601 | 529 (with shared module) |
+| Duplicated code | ~100 lines | 0 |
+| Component files | 3 | 4 (better separation) |
+
+### Build Status
+Build successful

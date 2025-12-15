@@ -1,7 +1,7 @@
 {
   "name": "miller-nav",
   "version": "0.1.0",
-  "description": "Miller columns navigation for Obsidian with user-defined folder hierarchy",
+  "description": "Miller columns navigation with user-defined folder hierarchy.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

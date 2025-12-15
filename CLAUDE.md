@@ -59,6 +59,12 @@ Refer to [docs/SRS.md](docs/SRS.md) for detailed requirements specification.
   - `features.md` - Feature tracking and status
   - `refactoring_log.md` - Code refactoring history
   - `TODO.md` - Planned features and tasks
+  - `RELEASE.md` - Release process guide
+  - `RELEASE_QUICK_REF.md` - Release quick reference
+- `scripts/` - Automation scripts
+  - `release.sh` - Automated release script
+- `releases/` - Release artifacts (created during release)
+  - `version{X}/` - Version-specific release files
 - `reference/notebook-navigator/` - Reference implementation (cloned from GitHub)
 
 ## Development Commands
@@ -100,6 +106,32 @@ cd miller_nav && npm run deploy
 
 **Note:** The test vault path is configured in `.env` file under `OBSIDIAN_TEST_VAULT_PATH`
 
+## Release Process
+
+**Quick method (automated):**
+```bash
+/release  # Using Claude Code
+# or
+./scripts/release.sh 1.0.0
+```
+
+**What the release process does:**
+1. Updates version in `manifest.json` and `package.json`
+2. Builds production bundle
+3. Creates `releases/version{X}/` directory with artifacts
+4. Generates SHA256 checksums
+5. Creates git tag and pushes to GitHub
+6. Creates GitHub release with downloadable assets
+
+**Prerequisites:**
+- GitHub CLI (`gh`) installed and authenticated
+- `jq` installed for JSON manipulation
+- Clean git working directory
+
+**Documentation:**
+- [docs/RELEASE.md](docs/RELEASE.md) - Complete release guide
+- [docs/RELEASE_QUICK_REF.md](docs/RELEASE_QUICK_REF.md) - Quick reference
+
 # Updates
 
 - After refactoring add the details in [docs/refactoring_log.md](docs/refactoring_log.md) file -- keep code only where absolutely necessary else describe in table and words
@@ -110,4 +142,6 @@ cd miller_nav && npm run deploy
 - [docs/SRS.md](docs/SRS.md) - Software Requirements Specification
 - [docs/features.md](docs/features.md) - Feature tracking and status
 - [docs/refactoring_log.md](docs/refactoring_log.md) - Code refactoring history
-- [docs/TODO.md](docs/TODO.md) - Planned features and tasks 
+- [docs/TODO.md](docs/TODO.md) - Planned features and tasks
+- [docs/RELEASE.md](docs/RELEASE.md) - Release process guide
+- [docs/RELEASE_QUICK_REF.md](docs/RELEASE_QUICK_REF.md) - Release quick reference 

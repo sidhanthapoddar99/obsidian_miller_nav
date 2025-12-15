@@ -5,7 +5,7 @@ description: Automate the complete release process for MillerNav Obsidian plugin
 
 # Release Automation Skill
 
-Automates the complete release workflow for the MillerNav Obsidian plugin.
+Guides users through the complete release workflow for the MillerNav Obsidian plugin with interactive step-by-step commands.
 
 ## When to Use This Skill
 
@@ -18,201 +18,418 @@ Use this skill when:
 
 ## What This Skill Does
 
-1. **Version Management**: Updates version numbers in `manifest.json` and `package.json`
-2. **Build Process**: Runs the production build (`npm run build`)
-3. **Artifact Creation**: Creates versioned directory `releases/version{X}/` with:
-   - `main.js` (bundled JavaScript)
-   - `manifest.json` (plugin metadata)
-   - `styles.css` (compiled CSS)
-   - `miller-nav-{X}.zip` (distribution archive)
-4. **Checksum Generation**: Creates SHA256 checksums for verification
-5. **Git Operations**: Commits changes, creates annotated tag, pushes to GitHub
-6. **GitHub Release**: Creates release with uploaded artifacts
+Guides the user through each release step:
+1. Version number collection and validation
+2. Version file updates
+3. Production build
+4. Artifact packaging
+5. Checksum generation
+6. Git operations (commit, tag, push)
+7. GitHub release creation
+8. Obsidian Community Plugin submission guidance
 
-## Instructions
+## Interactive Release Workflow
 
 ### Step 1: Ask for Version Number
 
-Ask the user what version number they want to release. Validate it follows semantic versioning format: `MAJOR.MINOR.PATCH` (e.g., 1.0.0, 0.5.3, 2.1.0).
+Ask the user what version number they want to release.
 
-**Example prompt:**
+**Prompt:**
 ```
-What version number would you like to release? (e.g., 1.0.0)
+What version number would you like to release?
+Format: MAJOR.MINOR.PATCH (e.g., 1.0.0, 0.5.3, 2.1.0)
 ```
 
-### Step 2: Check Prerequisites
+**Validate the format:**
+- Must match pattern: `X.Y.Z` where X, Y, Z are numbers
+- Examples: 1.0.0 ✓, 0.1.5 ✓, 2.10.3 ✓
+- Invalid: 1.0 ✗, v1.0.0 ✗, 1.0.0-beta ✗
 
-Verify these prerequisites are met:
-- GitHub CLI (`gh`) is installed and authenticated
-- `jq` is installed for JSON manipulation
-- Git working directory is clean (no uncommitted changes)
+### Step 2: Verify Prerequisites
 
-If prerequisites are missing, inform the user and provide installation instructions from `docs/RELEASE.md`.
+Check that required tools are available:
 
-### Step 3: Execute Release Script
-
-Run the release script with the version number:
 ```bash
-./scripts/release.sh {VERSION}
+# Check if jq is installed
+jq --version
+
+# Check if gh CLI is installed
+gh --version
+
+# Check if gh is authenticated
+gh auth status
+
+# Check git status is clean
+git status --porcelain
 ```
 
-**Monitor the script output for:**
-- Version updates confirmation
-- Build success
-- Artifact creation
-- Checksum generation
-- Git tag creation
-- GitHub release URL
+**If any prerequisite fails, provide installation instructions:**
 
-### Step 4: Handle Errors
+- **jq not found:**
+  - macOS: `brew install jq`
+  - Ubuntu/Debian: `sudo apt install jq`
+  - Fedora: `sudo dnf install jq`
 
-If the script encounters errors:
-1. Read the error message carefully
-2. Inform the user about the issue
-3. Provide specific troubleshooting steps
-4. Offer to run rollback if needed: `./scripts/release.sh rollback {VERSION}`
+- **gh not found:**
+  - Install from: https://cli.github.com/
+  - macOS: `brew install gh`
+  - Linux: See https://github.com/cli/cli/blob/trunk/docs/install_linux.md
 
-**Common issues:**
-- `jq not found` → User needs to install jq
-- `gh not authenticated` → User needs to run `gh auth login`
-- `Uncommitted changes` → User needs to commit or stash changes
-- `Tag already exists` → Tag needs to be deleted first
+- **gh not authenticated:**
+  - Run: `gh auth login`
+  - Follow the interactive prompts
 
-### Step 5: Report Success
+- **Uncommitted changes:**
+  - User needs to commit or stash changes first
+  - Show: `git status` output
+
+### Step 3: Update Version Files
+
+Update version in `manifest.json` and `package.json`:
+
+```bash
+# Update manifest.json
+jq --arg version "{VERSION}" '.version = $version' miller_nav/manifest.json > miller_nav/manifest.json.tmp
+mv miller_nav/manifest.json.tmp miller_nav/manifest.json
+
+# Update package.json
+jq --arg version "{VERSION}" '.version = $version' miller_nav/package.json > miller_nav/package.json.tmp
+mv miller_nav/package.json.tmp miller_nav/package.json
+
+# Verify the updates
+echo "Updated manifest.json to version: $(jq -r '.version' miller_nav/manifest.json)"
+echo "Updated package.json to version: $(jq -r '.version' miller_nav/package.json)"
+```
+
+### Step 4: Build the Plugin
+
+Run production build:
+
+```bash
+cd miller_nav && npm run build && cd ..
+```
+
+**Verify build output:**
+- Check that `miller_nav/build/` contains:
+  - `main.js`
+  - `manifest.json`
+  - `styles.css`
+
+### Step 5: Create Release Directory and Package Artifacts
+
+Create versioned release directory and copy files:
+
+```bash
+# Create release directory
+mkdir -p releases/version{VERSION}
+
+# Copy build artifacts
+cp miller_nav/build/main.js releases/version{VERSION}/
+cp miller_nav/build/manifest.json releases/version{VERSION}/
+cp miller_nav/build/styles.css releases/version{VERSION}/
+
+# Create ZIP archive
+cd releases/version{VERSION}
+zip miller-nav-{VERSION}.zip main.js manifest.json styles.css
+cd ../..
+
+# Confirm creation
+ls -lh releases/version{VERSION}/
+```
+
+### Step 6: Generate Checksums
+
+Create SHA256 checksums for verification:
+
+```bash
+cd releases/version{VERSION}
+sha256sum *.zip *.js *.json *.css > SHA256SUMS
+cd ../..
+
+# Display checksums
+echo "Generated checksums:"
+cat releases/version{VERSION}/SHA256SUMS
+```
+
+### Step 7: Create Git Commit and Tag
+
+Commit version changes and create annotated tag:
+
+```bash
+# Add version files
+git add miller_nav/manifest.json miller_nav/package.json
+
+# Create commit
+git commit -m "Release v{VERSION}
+
+- Updated version to {VERSION}
+- Built and packaged release artifacts
+- Generated checksums"
+
+# Create annotated tag
+git tag -a "v{VERSION}" -m "Release version {VERSION}
+
+## Installation
+
+Download \`miller-nav-{VERSION}.zip\` from the release assets.
+
+## Verification
+
+Verify checksums using:
+\`\`\`bash
+sha256sum -c SHA256SUMS
+\`\`\`"
+
+# Verify tag creation
+git tag -l "v{VERSION}"
+git log -1 --oneline
+```
+
+### Step 8: Push to GitHub
+
+Ask user to confirm push before proceeding:
+
+**Prompt:**
+```
+Ready to push to GitHub. This will:
+- Push the release commit to the main branch
+- Push the v{VERSION} tag
+
+Proceed? (y/n)
+```
+
+**If yes:**
+```bash
+# Push commit
+git push origin $(git branch --show-current)
+
+# Push tag
+git push origin v{VERSION}
+
+# Verify
+git ls-remote --tags origin v{VERSION}
+```
+
+### Step 9: Create GitHub Release
+
+**Ask for release notes:**
+
+**Prompt:**
+```
+Would you like to provide custom release notes, or use the default template? (custom/default)
+```
+
+**If default, use this template:**
+```markdown
+Release version {VERSION}
+
+See [TODO.md](../docs/TODO.md) for details.
+
+## Installation
+
+### From GitHub Release
+1. Download \`miller-nav-{VERSION}.zip\`
+2. Extract to your vault's \`.obsidian/plugins/miller-nav/\` folder
+3. Reload Obsidian
+4. Enable the plugin in Settings → Community Plugins
+
+### From Obsidian Community Plugins
+Once approved, you can install directly from Obsidian:
+Settings → Community Plugins → Browse → Search for "Miller Nav"
+
+## Verification
+
+Verify the download integrity using SHA256:
+\`\`\`bash
+sha256sum -c SHA256SUMS
+\`\`\`
+```
+
+**Create the release:**
+
+```bash
+# Create release with artifacts
+gh release create "v{VERSION}" \
+  releases/version{VERSION}/miller-nav-{VERSION}.zip \
+  releases/version{VERSION}/main.js \
+  releases/version{VERSION}/manifest.json \
+  releases/version{VERSION}/styles.css \
+  releases/version{VERSION}/SHA256SUMS \
+  --title "v{VERSION}" \
+  --notes "{RELEASE_NOTES}"
+
+# Get release URL
+gh release view "v{VERSION}" --web
+```
+
+### Step 10: Display Success and Next Steps
 
 After successful release, display:
-- GitHub release URL
-- Local artifacts location (`releases/version{X}/`)
-- Next steps for submitting to Obsidian community plugins
 
-### Step 6: Guide Obsidian Submission
+```
+✅ Release v{VERSION} completed successfully!
 
-Provide instructions for submitting to Obsidian Community Plugins:
+📦 Release URL: https://github.com/{USERNAME}/obsidian_miller_nav/releases/tag/v{VERSION}
 
-1. **Fork the repository**: https://github.com/obsidianmd/obsidian-releases
+📁 Local artifacts: releases/version{VERSION}/
 
-2. **Add entry to community-plugins.json**:
-```json
+## Next Steps: Submit to Obsidian Community Plugins
+
+To make your plugin available in Obsidian's Community Plugins directory:
+
+### 1. Fork the obsidian-releases repository
+Visit: https://github.com/obsidianmd/obsidian-releases
+Click "Fork" to create your own copy
+
+### 2. Add your plugin to community-plugins.json
+
+Clone your fork and edit \`community-plugins.json\`:
+
+\`\`\`json
 {
   "id": "miller-nav",
   "name": "Miller Nav",
-  "author": "{USER_NAME}",
+  "author": "{YOUR_NAME}",
   "description": "Multi-pane hierarchical navigation for Obsidian vaults using Miller columns",
-  "repo": "{GITHUB_USERNAME}/obsidian_miller_nav"
+  "repo": "{YOUR_GITHUB_USERNAME}/obsidian_miller_nav"
 }
+\`\`\`
+
+Add this entry in alphabetical order by ID.
+
+### 3. Create Pull Request
+
+Commit your changes:
+\`\`\`bash
+git add community-plugins.json
+git commit -m "Add Miller Nav plugin"
+git push origin master
+\`\`\`
+
+Then create a PR to the main obsidian-releases repository.
+
+### 4. Wait for Review
+
+The Obsidian team will review your submission. This typically takes a few days to a few weeks.
+
+They will check:
+- Plugin functionality and quality
+- Code security and performance
+- Compliance with Obsidian guidelines
+- Proper manifest.json configuration
+
+### 5. After Approval
+
+Once approved, your plugin will appear in:
+Settings → Community Plugins → Browse
+
+Users can then install it directly from Obsidian!
+
+## Resources
+
+- Obsidian Developer Docs: https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin
+- Sample Plugins: https://github.com/obsidianmd/obsidian-sample-plugin
+- Plugin Guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 ```
 
-3. **Create pull request** to obsidian-releases repository
+## Error Handling
 
-4. **Wait for review** from Obsidian team (may take several days)
+### Common Issues and Solutions
 
-## Release Directory Structure
-
-Each release creates this structure:
+**Build fails:**
+```bash
+cd miller_nav
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+cd ..
 ```
-releases/
-└── version{X}/
-    ├── main.js                   # Bundled JavaScript
-    ├── manifest.json             # Plugin metadata
-    ├── styles.css                # Compiled CSS
-    ├── miller-nav-{X}.zip       # Distribution archive
-    ├── SHA256SUMS                # Checksums file
-    └── RELEASE_NOTES.md          # Release notes
+
+**Tag already exists:**
+```bash
+# Delete local tag
+git tag -d v{VERSION}
+
+# Delete remote tag
+git push origin --delete v{VERSION}
+
+# Delete GitHub release
+gh release delete v{VERSION} --yes
+```
+
+**Version files not updated:**
+- Check jq is installed: `jq --version`
+- Manually edit the files if needed
+- Verify JSON syntax is valid
+
+**Push fails (authentication):**
+```bash
+# Check remote URL
+git remote -v
+
+# If using HTTPS, switch to SSH:
+git remote set-url origin git@github.com:{USERNAME}/obsidian_miller_nav.git
+
+# Or configure credentials
+gh auth login
+```
+
+**GitHub release creation fails:**
+```bash
+# Check authentication
+gh auth status
+
+# Re-authenticate if needed
+gh auth login
+
+# Verify release artifacts exist
+ls -la releases/version{VERSION}/
 ```
 
 ## Rollback Procedure
 
-If something goes wrong and the user wants to rollback:
+If something goes wrong during release:
 
 ```bash
-./scripts/release.sh rollback {VERSION}
-```
+# Delete local tag
+git tag -d v{VERSION}
 
-This will:
-- Delete local git tag
-- Delete remote git tag
-- Delete GitHub release
-- Revert the release commit
+# Delete remote tag (if pushed)
+git push origin --delete v{VERSION}
 
-## Examples
+# Delete GitHub release (if created)
+gh release delete v{VERSION} --yes
 
-### Example 1: First Release
+# Revert the commit (if pushed)
+git revert HEAD
+git push origin $(git branch --show-current)
 
-**User:** "I want to create the first release"
+# Or reset if not pushed
+git reset --hard HEAD~1
 
-**Your response:**
-```
-I'll help you create the first release for MillerNav. What version number would you like to use?
-For a first release, I recommend version 1.0.0.
-```
-
-**After user provides version:**
-```
-Great! I'll create release v1.0.0. Let me first check the prerequisites...
-[Check prerequisites]
-[Run release script]
-[Report results]
-```
-
-### Example 2: Bug Fix Release
-
-**User:** "Release version 1.0.1 with bug fixes"
-
-**Your response:**
-```
-I'll create release v1.0.1 for bug fixes. Let me run the release process...
-[Execute release workflow]
-```
-
-### Example 3: Error Handling
-
-**User:** "Create release 2.0.0"
-
-**Script error:** "jq: command not found"
-
-**Your response:**
-```
-The release process failed because jq is not installed.
-
-To fix this:
-- On macOS: brew install jq
-- On Ubuntu/Debian: sudo apt install jq
-- On Fedora: sudo dnf install jq
-
-After installing jq, I can retry the release.
+# Clean up release directory
+rm -rf releases/version{VERSION}
 ```
 
 ## Best Practices
 
-1. **Always validate version format** before running the script
-2. **Check git status** to ensure clean working directory
-3. **Monitor script output** for any errors or warnings
-4. **Verify checksums** are generated correctly
-5. **Test ZIP extraction** before finalizing release
-6. **Provide clear next steps** after successful release
-
-## Troubleshooting Guide
-
-| Issue | Solution |
-|-------|----------|
-| jq not found | Install jq: `brew install jq` or `sudo apt install jq` |
-| gh not found | Install GitHub CLI from https://cli.github.com/ |
-| Not authenticated | Run `gh auth login` |
-| Tag exists | Delete existing tag: `git tag -d v{X} && git push origin --delete v{X}` |
-| Uncommitted changes | Commit or stash changes first |
-| Build fails | Check npm dependencies: `cd miller_nav && npm install` |
-| Invalid version | Use MAJOR.MINOR.PATCH format (e.g., 1.0.0) |
-
-## Related Documentation
-
-- **Complete Guide**: [docs/RELEASE.md](../../docs/RELEASE.md)
-- **Quick Reference**: [docs/RELEASE_QUICK_REF.md](../../docs/RELEASE_QUICK_REF.md)
-- **Release Script**: [scripts/release.sh](../../scripts/release.sh)
+1. **Always test the plugin** in a test vault before releasing
+2. **Update CHANGELOG or TODO.md** with release notes before releasing
+3. **Verify checksums** after generating
+4. **Test the ZIP file** by extracting and checking contents
+5. **Keep version numbers semantic**: MAJOR.MINOR.PATCH
+6. **Tag messages** should be descriptive
+7. **Test installation** from the ZIP file before finalizing
 
 ## Notes
 
-- The `releases/` directory is in `.gitignore` and won't be committed to git
-- Artifacts are stored locally and uploaded to GitHub Releases
-- The script automatically creates git tags with `v` prefix (e.g., v1.0.0)
-- Release notes can be provided interactively or use default template
-- Checksums are generated using SHA256 algorithm
+- The `releases/` directory is in `.gitignore` and won't be committed
+- Artifacts are only stored locally and on GitHub Releases
+- Tags use `v` prefix (e.g., v1.0.0) by convention
+- Always verify build output before creating release
+- GitHub releases are public once created
+
+## Related Documentation
+
+- **Release Guide**: [docs/RELEASE.md](../../docs/RELEASE.md)
+- **Quick Reference**: [docs/RELEASE_QUICK_REF.md](../../docs/RELEASE_QUICK_REF.md)

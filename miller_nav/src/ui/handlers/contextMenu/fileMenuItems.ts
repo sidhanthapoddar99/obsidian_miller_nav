@@ -122,9 +122,8 @@ function addFileOperations(menu: Menu, options: FileMenuOptions): void {
     menuItem
       .setTitle('Copy')
       .setIcon('copy')
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement copy to clipboard
+        options.callbacks.copyItems([item.path]);
       });
   });
 
@@ -133,9 +132,8 @@ function addFileOperations(menu: Menu, options: FileMenuOptions): void {
     menuItem
       .setTitle('Cut')
       .setIcon('scissors')
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement cut to clipboard
+        options.callbacks.cutItems([item.path]);
       });
   });
 

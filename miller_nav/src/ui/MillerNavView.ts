@@ -2,7 +2,7 @@
  * MillerNavView - Main ItemView for Miller columns navigation
  */
 
-import { ItemView, WorkspaceLeaf, TFolder, TFile, Platform } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFolder, TFile, Platform, Notice } from 'obsidian';
 import { MILLER_NAV_VIEW, PaneItem } from '../types';
 import type MillerNavPlugin from '../main';
 import type { ViewCallbacks, ViewState } from './types';
@@ -10,8 +10,8 @@ import { renderColumnHeader, renderColumnFooter, renderCollapsedColumn, renderIt
 import { DragDropHandler } from './handlers';
 import { showContextMenu } from './handlers/contextMenu';
 import { DeleteConfirmModal, RenameModal } from './modals';
-import { FileOperations } from './utils';
-import { ColumnManager, SelectionManager } from './managers';
+import { FileOperations, getUniqueFileName, buildPath } from './utils';
+import { ColumnManager, SelectionManager, ClipboardManager } from './managers';
 import { ItemDataProvider } from './providers';
 
 export class MillerNavView extends ItemView {
@@ -22,6 +22,7 @@ export class MillerNavView extends ItemView {
   // Extracted managers
   private columnManager: ColumnManager;
   private selectionManager: SelectionManager;
+  private clipboardManager: ClipboardManager;
   private itemDataProvider: ItemDataProvider;
 
   // Handlers
@@ -39,6 +40,7 @@ export class MillerNavView extends ItemView {
     // Initialize managers
     this.columnManager = new ColumnManager();
     this.selectionManager = new SelectionManager();
+    this.clipboardManager = new ClipboardManager(this.app);
     this.itemDataProvider = new ItemDataProvider(
       this.app.vault,
       this.plugin.dataManager,
@@ -134,6 +136,7 @@ export class MillerNavView extends ItemView {
         handleItemClick: (path, type, i) => this.handleItemClick(path, type, i),
         moveItems: (paths, target) => this.moveItems(paths, target),
         deleteItem: (path) => this.deleteItem(path),
+        deleteItems: (paths) => this.deleteItems(paths),
         renameItem: (path) => this.renameItem(path),
         clearSelection: () => this.clearSelection(),
         toggleItemSelection: (path, add) => this.toggleItemSelection(path, add),
@@ -142,6 +145,10 @@ export class MillerNavView extends ItemView {
         addMarkedFolder: (path) => this.plugin.dataManager.addMarkedFolder(path),
         removeMarkedFolder: (path) => this.plugin.dataManager.removeMarkedFolder(path),
         getActiveFilePath: () => this.activeFilePath,
+        // Clipboard operations
+        copyItems: (paths) => this.copyItems(paths),
+        cutItems: (paths) => this.cutItems(paths),
+        pasteItems: (target) => this.pasteItems(target),
       };
     }
     return this.cachedCallbacks!;
@@ -152,6 +159,30 @@ export class MillerNavView extends ItemView {
   private shouldOpenHorizontally(folderPath: string, columnIndex: number): boolean {
     const isMarked = this.plugin.dataManager.isMarkedFolder(folderPath);
     return isMarked && columnIndex < this.plugin.settings.maxLevels;
+  }
+
+  /**
+   * Create a synthetic PaneItem from a folder path for context menus
+   */
+  private createFolderItemFromPath(folderPath: string, columnIndex: number): PaneItem {
+    let folderName: string;
+    if (folderPath === '/') {
+      folderName = this.app.vault.getName();
+    } else {
+      const folder = this.app.vault.getAbstractFileByPath(folderPath);
+      folderName = (folder instanceof TFolder) ? folder.name : folderPath.split('/').pop() ?? folderPath;
+    }
+
+    return {
+      id: `folder-${folderPath}`,
+      type: 'folder',
+      name: folderName,
+      path: folderPath,
+      level: columnIndex,
+      isMarked: this.plugin.dataManager.isMarkedFolder(folderPath),
+      hasChildren: true,
+      icon: 'folder',
+    };
   }
 
   // ============ Manual Reveal ============
@@ -270,6 +301,85 @@ export class MillerNavView extends ItemView {
     );
   }
 
+  private async deleteItems(paths: string[]): Promise<void> {
+    const itemNames = paths.map(p => p.split('/').pop() ?? p);
+
+    const doDelete = async () => {
+      await this.fileOps.deleteItems(paths, () => this.renderAllColumns());
+    };
+
+    if (this.plugin.settings.confirmBeforeDelete) {
+      new DeleteConfirmModal(this.app, itemNames, doDelete).open();
+    } else {
+      await doDelete();
+    }
+  }
+
+  // ============ Clipboard Operations ============
+
+  private copyItems(paths: string[]): void {
+    this.clipboardManager.copy(paths);
+    const count = paths.length;
+    new Notice(`Copied ${count} item${count === 1 ? '' : 's'} to clipboard`);
+  }
+
+  private cutItems(paths: string[]): void {
+    this.clipboardManager.cut(paths);
+    const count = paths.length;
+    new Notice(`Cut ${count} item${count === 1 ? '' : 's'} to clipboard`);
+  }
+
+  private async pasteItems(targetFolderPath: string): Promise<void> {
+    const clipboardData = this.clipboardManager.getClipboardData();
+    if (!clipboardData) {
+      new Notice('Clipboard is empty');
+      return;
+    }
+
+    const { items, operation } = clipboardData;
+
+    if (operation === 'cut') {
+      // Move items
+      await this.fileOps.moveItems(items, targetFolderPath, () => this.renderAllColumns());
+      this.clipboardManager.clear();
+      new Notice(`Moved ${items.length} item${items.length === 1 ? '' : 's'}`);
+    } else {
+      // Copy items (duplicate)
+      let successCount = 0;
+      for (const itemPath of items) {
+        const item = this.app.vault.getAbstractFileByPath(itemPath);
+        if (!item) continue;
+
+        try {
+          if (item instanceof TFile) {
+            // Duplicate file
+            const content = await this.app.vault.read(item);
+            const uniqueName = await getUniqueFileName(
+              this.app,
+              targetFolderPath,
+              item.basename,
+              item.extension
+            );
+            const newPath = buildPath(targetFolderPath, uniqueName);
+            await this.app.vault.create(newPath, content);
+            successCount++;
+          } else if (item instanceof TFolder) {
+            // Duplicate folder
+            const result = await this.fileOps.duplicateFolder(itemPath);
+            if (result) successCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to copy ${itemPath}:`, error);
+        }
+      }
+
+      if (successCount > 0) {
+        new Notice(`Copied ${successCount} item${successCount === 1 ? '' : 's'}`);
+        await this.renderAllColumns();
+      }
+    }
+  }
+
   // ============ Rendering ============
 
   private async renderAllColumns(): Promise<void> {
@@ -331,6 +441,36 @@ export class MillerNavView extends ItemView {
     } else {
       await this.renderSubfolderColumn(listEl, columnState.folderPath, columnIndex);
     }
+
+    // Empty space context menu
+    listEl.addEventListener('contextmenu', (e) => {
+      // Check if click is on empty space (not on an item)
+      const target = e.target as HTMLElement;
+      if (target === listEl || !target.closest('.miller-nav-item')) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get folder path for this column
+        const folderPath = columnIndex === 0 ? '/' : columnState.folderPath;
+
+        // Create synthetic folder item
+        const folderItem = this.createFolderItemFromPath(folderPath, columnIndex);
+
+        // Show context menu
+        showContextMenu({
+          app: this.app,
+          event: e,
+          item: folderItem,
+          columnIndex,
+          selectedItems: this.selectionManager.selectedItems,
+          maxLevels: this.plugin.settings.maxLevels,
+          confirmBeforeDelete: this.plugin.settings.confirmBeforeDelete,
+          isMarkedFolder: (path) => this.plugin.dataManager.isMarkedFolder(path),
+          clipboardManager: this.clipboardManager,
+          callbacks: this.getCallbacks()
+        });
+      }
+    });
 
     // Render footer with New Note / New Folder buttons
     renderColumnFooter(columnEl, columnState.folderPath, this.getCallbacks());
@@ -440,6 +580,7 @@ export class MillerNavView extends ItemView {
         maxLevels: this.plugin.settings.maxLevels,
         confirmBeforeDelete: this.plugin.settings.confirmBeforeDelete,
         isMarkedFolder: (path) => this.plugin.dataManager.isMarkedFolder(path),
+        clipboardManager: this.clipboardManager,
         callbacks: this.getCallbacks()
       });
     });

@@ -5,6 +5,7 @@
 
 import { Menu, TFolder } from 'obsidian';
 import type { FolderMenuOptions } from './types';
+import { FileOperations } from '../../utils';
 import {
   addSharedShortcutSection,
   addSharedClipboardOperations,
@@ -105,9 +106,9 @@ function addFolderOperations(menu: Menu, options: FolderMenuOptions): void {
     menuItem
       .setTitle('Duplicate')
       .setIcon('copy')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement folder duplication
+      .onClick(async () => {
+        const fileOps = new FileOperations(app);
+        await fileOps.duplicateFolder(item.path, () => options.callbacks.renderAllColumns());
       });
   });
 
@@ -126,9 +127,13 @@ function addFolderOperations(menu: Menu, options: FolderMenuOptions): void {
     menuItem
       .setTitle('Search in folder')
       .setIcon('search')
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement folder search
+        // @ts-ignore - undocumented API
+        const globalSearch = app.internalPlugins.getPluginById('global-search');
+        if (globalSearch?.instance?.openGlobalSearch) {
+          // @ts-ignore
+          globalSearch.instance.openGlobalSearch(`path:"${item.path}"`);
+        }
       });
   });
 
@@ -137,9 +142,8 @@ function addFolderOperations(menu: Menu, options: FolderMenuOptions): void {
     menuItem
       .setTitle('Copy')
       .setIcon('copy')
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement copy to clipboard
+        options.callbacks.copyItems([item.path]);
       });
   });
 
@@ -148,11 +152,24 @@ function addFolderOperations(menu: Menu, options: FolderMenuOptions): void {
     menuItem
       .setTitle('Cut')
       .setIcon('scissors')
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement cut to clipboard
+        options.callbacks.cutItems([item.path]);
       });
   });
+
+  // Paste (only show if clipboard has content)
+  if (!options.clipboardManager.isEmpty()) {
+    menu.addItem((menuItem) => {
+      const count = options.clipboardManager.getItemCount();
+      const operation = options.clipboardManager.isCut() ? 'Move' : 'Paste';
+      menuItem
+        .setTitle(`${operation} ${count} item${count === 1 ? '' : 's'}`)
+        .setIcon('clipboard-paste')
+        .onClick(async () => {
+          await options.callbacks.pasteItems(item.path);
+        });
+    });
+  }
 
   menu.addSeparator();
 }

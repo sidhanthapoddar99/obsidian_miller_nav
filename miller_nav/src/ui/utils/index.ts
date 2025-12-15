@@ -33,6 +33,9 @@ export function getPathName(path: string): string {
 export { FileOperations } from './FileOperations';
 export type { FileType } from './FileOperations';
 
+// Re-export FileNaming utilities
+export { getUniqueFileName } from './FileNaming';
+
 /**
  * Build a path from parent and name
  */

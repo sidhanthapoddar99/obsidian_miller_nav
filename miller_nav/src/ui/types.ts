@@ -48,6 +48,7 @@ export interface ViewCallbacks {
   handleItemClick: (path: string, type: string, columnIndex: number) => void;
   moveItems: (itemPaths: string[], targetFolderPath: string) => Promise<void>;
   deleteItem: (path: string) => Promise<void>;
+  deleteItems: (paths: string[]) => Promise<void>;
   renameItem: (path: string) => void;
   clearSelection: () => void;
   toggleItemSelection: (path: string, addToSelection: boolean) => void;
@@ -56,4 +57,8 @@ export interface ViewCallbacks {
   addMarkedFolder: (path: string) => void;
   removeMarkedFolder: (path: string) => void;
   getActiveFilePath: () => string | null;
+  // Clipboard operations
+  copyItems: (paths: string[]) => void;
+  cutItems: (paths: string[]) => void;
+  pasteItems: (targetFolderPath: string) => Promise<void>;
 }

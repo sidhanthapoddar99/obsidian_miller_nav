@@ -5,6 +5,7 @@
 import { App, Menu } from 'obsidian';
 import { PaneItem } from '../../../types';
 import type { ViewCallbacks } from '../../types';
+import type { ClipboardManager } from '../../managers';
 
 /**
  * Main context menu options
@@ -18,6 +19,7 @@ export interface ContextMenuOptions {
   maxLevels: number;
   confirmBeforeDelete: boolean;
   isMarkedFolder: (path: string) => boolean;
+  clipboardManager: ClipboardManager;
   callbacks: ViewCallbacks;
 }
 
@@ -29,6 +31,7 @@ export interface BulkMenuOptions {
   selectedItems: Set<string>;
   columnIndex: number;
   maxLevels: number;
+  clipboardManager: ClipboardManager;
   callbacks: ViewCallbacks;
 }
 
@@ -42,6 +45,7 @@ export interface FolderMenuOptions {
   maxLevels: number;
   confirmBeforeDelete: boolean;
   isMarkedFolder: (path: string) => boolean;
+  clipboardManager: ClipboardManager;
   callbacks: ViewCallbacks;
 }
 
@@ -52,6 +56,7 @@ export interface FileMenuOptions {
   app: App;
   item: PaneItem;
   confirmBeforeDelete: boolean;
+  clipboardManager: ClipboardManager;
   callbacks: ViewCallbacks;
 }
 

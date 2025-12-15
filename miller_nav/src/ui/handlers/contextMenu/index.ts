@@ -18,7 +18,7 @@ import { buildBulkMenu } from './bulkMenuItems';
  * Show context menu for a file, folder, or bulk selection
  */
 export function showContextMenu(options: ContextMenuOptions): void {
-  const { event, item, selectedItems, app, columnIndex, maxLevels, confirmBeforeDelete, isMarkedFolder, callbacks } = options;
+  const { event, item, selectedItems, app, columnIndex, maxLevels, confirmBeforeDelete, isMarkedFolder, clipboardManager, callbacks } = options;
   const menu = new Menu();
   const selectedCount = selectedItems.size;
 
@@ -29,6 +29,7 @@ export function showContextMenu(options: ContextMenuOptions): void {
       selectedItems,
       columnIndex,
       maxLevels,
+      clipboardManager,
       callbacks
     });
 
@@ -61,6 +62,7 @@ export function showContextMenu(options: ContextMenuOptions): void {
       maxLevels,
       confirmBeforeDelete,
       isMarkedFolder,
+      clipboardManager,
       callbacks
     });
   } else if (item.type === 'file') {
@@ -68,6 +70,7 @@ export function showContextMenu(options: ContextMenuOptions): void {
       app,
       item,
       confirmBeforeDelete,
+      clipboardManager,
       callbacks
     });
   }

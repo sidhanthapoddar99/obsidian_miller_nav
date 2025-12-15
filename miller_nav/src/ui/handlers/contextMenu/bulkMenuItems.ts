@@ -115,15 +115,55 @@ function addBulkOperations(menu: Menu, options: BulkMenuOptions): void {
 
   menu.addSeparator();
 
+  // Copy N items
+  menu.addItem((menuItem) => {
+    menuItem
+      .setTitle(`Copy ${selectedCount} items`)
+      .setIcon('copy')
+      .onClick(() => {
+        callbacks.copyItems(Array.from(selectedItems));
+      });
+  });
+
+  // Cut N items
+  menu.addItem((menuItem) => {
+    menuItem
+      .setTitle(`Cut ${selectedCount} items`)
+      .setIcon('scissors')
+      .onClick(() => {
+        callbacks.cutItems(Array.from(selectedItems));
+      });
+  });
+
+  // Paste (only show if clipboard has content)
+  if (!options.clipboardManager.isEmpty()) {
+    menu.addItem((menuItem) => {
+      const count = options.clipboardManager.getItemCount();
+      const operation = options.clipboardManager.isCut() ? 'Move' : 'Paste';
+      // Get first selected item's parent as paste target
+      const firstItemPath = Array.from(selectedItems)[0];
+      const firstItem = app.vault.getAbstractFileByPath(firstItemPath);
+      const targetPath = firstItem?.parent?.path ?? '/';
+
+      menuItem
+        .setTitle(`${operation} ${count} item${count === 1 ? '' : 's'} here`)
+        .setIcon('clipboard-paste')
+        .onClick(async () => {
+          await callbacks.pasteItems(targetPath);
+        });
+    });
+  }
+
+  menu.addSeparator();
+
   // Delete N items
   menu.addItem((menuItem) => {
     menuItem
       .setTitle(`Delete ${selectedCount} items`)
       .setIcon('trash')
       .setWarning(true)
-      .setDisabled(true)
       .onClick(() => {
-        // TODO: Implement bulk delete
+        callbacks.deleteItems(Array.from(selectedItems));
       });
   });
 
@@ -132,9 +172,68 @@ function addBulkOperations(menu: Menu, options: BulkMenuOptions): void {
     menuItem
       .setTitle(`Move ${selectedCount} items`)
       .setIcon('folder-input')
-      .setDisabled(true)
-      .onClick(() => {
-        // TODO: Implement bulk move
+      .onClick(async () => {
+        // Use the same folder picker pattern as "Create new folder with N items"
+        const folderName = await new Promise<string | null>((resolve) => {
+          const modal = new (require('obsidian').Modal)(app);
+          modal.titleEl.setText('Move items to folder');
+
+          const contentEl = modal.contentEl;
+          contentEl.createEl('p', { text: `Select destination for ${selectedCount} items` });
+
+          const inputEl = contentEl.createEl('input', {
+            type: 'text',
+            placeholder: 'Folder path (e.g., folder/subfolder)',
+          });
+          inputEl.style.width = '100%';
+          inputEl.style.marginBottom = '10px';
+
+          const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
+
+          const moveBtn = buttonContainer.createEl('button', { text: 'Move', cls: 'mod-cta' });
+          moveBtn.addEventListener('click', () => {
+            const path = inputEl.value.trim();
+            if (path) {
+              modal.close();
+              resolve(path);
+            }
+          });
+
+          const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+          cancelBtn.addEventListener('click', () => {
+            modal.close();
+            resolve(null);
+          });
+
+          inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const path = inputEl.value.trim();
+              if (path) {
+                modal.close();
+                resolve(path);
+              }
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              modal.close();
+              resolve(null);
+            }
+          });
+
+          modal.open();
+        });
+
+        if (!folderName) return;
+
+        // Move all selected items to the target folder
+        const itemPaths = Array.from(selectedItems);
+        await callbacks.moveItems(itemPaths, folderName);
+
+        // Clear selection
+        callbacks.clearSelection();
+
+        // Refresh the view
+        await callbacks.renderAllColumns();
       });
   });
 

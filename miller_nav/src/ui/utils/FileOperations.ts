@@ -3,8 +3,8 @@
  * Consolidates create, rename, delete, and move operations
  */
 
-import { App, TFile, TFolder } from 'obsidian';
-import { buildPath } from './index';
+import { App, TFile, TFolder, Notice } from 'obsidian';
+import { buildPath, getUniqueFileName } from './index';
 
 export type FileType = 'note' | 'folder' | 'canvas' | 'base';
 
@@ -48,7 +48,14 @@ export class FileOperations {
     onSuccess?: () => void
   ): Promise<TFile | null> {
     const config = FILE_TYPE_CONFIGS[type];
-    const fileName = `${config.defaultName}.${config.extension}`;
+
+    // Get unique file name with automatic numbering
+    const fileName = await getUniqueFileName(
+      this.app,
+      folderPath,
+      config.defaultName,
+      config.extension
+    );
     const filePath = buildPath(folderPath, fileName);
 
     try {
@@ -70,7 +77,14 @@ export class FileOperations {
    * Create a new folder
    */
   async createFolder(parentPath: string, onSuccess?: () => void): Promise<TFolder | null> {
-    const folderPath = buildPath(parentPath, 'New Folder');
+    // Get unique folder name with automatic numbering
+    const folderName = await getUniqueFileName(
+      this.app,
+      parentPath,
+      'New Folder',
+      '' // Empty extension for folders
+    );
+    const folderPath = buildPath(parentPath, folderName);
 
     try {
       await this.app.vault.createFolder(folderPath);
@@ -152,7 +166,34 @@ export class FileOperations {
         // Don't move into a subfolder of itself
         if (targetFolderPath.startsWith(itemPath + '/')) continue;
 
-        const newPath = `${targetFolderPath}/${item.name}`;
+        // Check for naming conflict and resolve with unique name
+        let targetName = item.name;
+        const basicTargetPath = `${targetFolderPath}/${item.name}`;
+        const conflictExists = await this.app.vault.adapter.exists(basicTargetPath);
+
+        if (conflictExists && basicTargetPath !== itemPath) {
+          // Generate unique name for the target
+          if (item instanceof TFile) {
+            const baseName = item.basename;
+            const extension = item.extension;
+            targetName = await getUniqueFileName(
+              this.app,
+              targetFolderPath,
+              baseName,
+              extension
+            );
+          } else {
+            // Folder
+            targetName = await getUniqueFileName(
+              this.app,
+              targetFolderPath,
+              item.name,
+              ''
+            );
+          }
+        }
+
+        const newPath = `${targetFolderPath}/${targetName}`;
         await this.app.fileManager.renameFile(item, newPath);
       }
 
@@ -161,6 +202,113 @@ export class FileOperations {
     } catch (error) {
       console.error('Failed to move items:', error);
       return false;
+    }
+  }
+
+  /**
+   * Delete multiple items (move to trash)
+   */
+  async deleteItems(
+    paths: string[],
+    onSuccess?: () => void
+  ): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+
+    for (const path of paths) {
+      const file = this.app.vault.getAbstractFileByPath(path);
+      if (!file) {
+        failed++;
+        continue;
+      }
+
+      try {
+        await this.app.vault.trash(file, true);
+        success++;
+      } catch (error) {
+        console.error(`Failed to delete ${path}:`, error);
+        failed++;
+      }
+    }
+
+    // Show summary notification
+    if (success > 0) {
+      new Notice(`Deleted ${success} item${success === 1 ? '' : 's'}`);
+    }
+    if (failed > 0) {
+      new Notice(`Failed to delete ${failed} item${failed === 1 ? '' : 's'}`, 5000);
+    }
+
+    if (success > 0) {
+      onSuccess?.();
+    }
+
+    return { success, failed };
+  }
+
+  /**
+   * Duplicate a folder recursively (deep copy)
+   */
+  async duplicateFolder(
+    sourcePath: string,
+    onSuccess?: () => void
+  ): Promise<string | null> {
+    const sourceFolder = this.app.vault.getAbstractFileByPath(sourcePath);
+    if (!(sourceFolder instanceof TFolder)) {
+      new Notice('Source is not a folder');
+      return null;
+    }
+
+    const parentPath = sourceFolder.parent?.path ?? '/';
+    const baseName = sourceFolder.name;
+
+    // Get unique folder name
+    const uniqueName = await getUniqueFileName(this.app, parentPath, baseName, '');
+    const targetPath = buildPath(parentPath, uniqueName);
+
+    try {
+      // Create the new folder
+      await this.app.vault.createFolder(targetPath);
+
+      // Recursively copy contents
+      await this.copyFolderContents(sourceFolder, targetPath);
+
+      new Notice(`Duplicated folder: ${uniqueName}`);
+      onSuccess?.();
+      return targetPath;
+    } catch (error) {
+      console.error('Failed to duplicate folder:', error);
+      new Notice('Failed to duplicate folder', 5000);
+      return null;
+    }
+  }
+
+  /**
+   * Helper: Recursively copy folder contents
+   */
+  private async copyFolderContents(sourceFolder: TFolder, targetFolderPath: string): Promise<void> {
+    for (const child of sourceFolder.children) {
+      if (child instanceof TFile) {
+        // Copy file
+        try {
+          const content = await this.app.vault.read(child);
+          const newFilePath = buildPath(targetFolderPath, child.name);
+          await this.app.vault.create(newFilePath, content);
+        } catch (error) {
+          console.error(`Failed to copy file ${child.path}:`, error);
+          // Continue with other files
+        }
+      } else if (child instanceof TFolder) {
+        // Recursively copy subfolder
+        try {
+          const newFolderPath = buildPath(targetFolderPath, child.name);
+          await this.app.vault.createFolder(newFolderPath);
+          await this.copyFolderContents(child, newFolderPath);
+        } catch (error) {
+          console.error(`Failed to copy folder ${child.path}:`, error);
+          // Continue with other folders
+        }
+      }
     }
   }
 }

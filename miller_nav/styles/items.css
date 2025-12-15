@@ -145,3 +145,30 @@
   background: rgba(255, 255, 255, 0.2);
   color: var(--text-on-accent);
 }
+
+/* ========== Active File ========== */
+/* Currently open file */
+.miller-nav-item.is-active-file {
+  background: var(--background-modifier-active-hover, rgba(var(--interactive-accent-rgb), 0.15));
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 5px;
+}
+
+.miller-nav-item.is-active-file .miller-nav-icon {
+  color: var(--interactive-accent);
+}
+
+/* ========== Extension Label ========== */
+/* For unknown file types */
+.miller-nav-extension {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-left: auto;
+  padding: 2px 4px;
+  background: var(--background-modifier-hover);
+  border-radius: 3px;
+  flex-shrink: 0;
+}

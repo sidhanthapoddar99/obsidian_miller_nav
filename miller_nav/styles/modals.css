@@ -70,3 +70,65 @@
 .miller-nav-delete-buttons button.mod-warning:hover {
   opacity: 0.9;
 }
+
+/* ========== Rename Modal ========== */
+.miller-nav-rename-modal {
+  padding: 16px;
+}
+
+.miller-nav-rename-modal h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.miller-nav-rename-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.miller-nav-rename-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.miller-nav-rename-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.miller-nav-rename-buttons button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.1s ease;
+}
+
+.miller-nav-rename-buttons button:first-child {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.miller-nav-rename-buttons button:first-child:hover {
+  background: var(--background-modifier-border);
+}
+
+.miller-nav-rename-buttons button.mod-cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.miller-nav-rename-buttons button.mod-cta:hover {
+  opacity: 0.9;
+}

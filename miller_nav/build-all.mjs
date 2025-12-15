@@ -56,8 +56,7 @@ try {
 console.log('5️⃣  Copying files to build/...');
 const filesToCopy = [
   { src: 'main.js', dest: 'main.js' },
-  { src: 'manifest.json', dest: 'manifest.json' },
-  { src: 'styles/styles.css', dest: 'styles.css' }
+  { src: 'manifest.json', dest: 'manifest.json' }
 ];
 
 for (const file of filesToCopy) {
@@ -72,6 +71,16 @@ for (const file of filesToCopy) {
   fs.copyFileSync(srcPath, destPath);
   const size = fs.statSync(destPath).size;
   console.log(`   ✓ ${file.dest} (${Math.round(size / 1024)}KB)`);
+}
+
+// Verify styles.css was generated
+const stylesPath = path.join(buildDir, 'styles.css');
+if (fs.existsSync(stylesPath)) {
+  const size = fs.statSync(stylesPath).size;
+  console.log(`   ✓ styles.css (${Math.round(size / 1024)}KB)`);
+} else {
+  console.error('   ❌ styles.css not found in build/');
+  process.exit(1);
 }
 
 console.log('\n✅ Build complete!');

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const stylesDir = path.join(__dirname, 'styles');
+const buildDir = path.join(__dirname, 'build');
 
 // Order matters! These files will be concatenated in this order
 const cssFiles = [
@@ -57,7 +58,12 @@ for (const file of cssFiles) {
   combinedCSS += content.trim() + '\n\n';
 }
 
-const outputPath = path.join(stylesDir, 'styles.css');
+// Ensure build directory exists
+if (!fs.existsSync(buildDir)) {
+  fs.mkdirSync(buildDir, { recursive: true });
+}
+
+const outputPath = path.join(buildDir, 'styles.css');
 fs.writeFileSync(outputPath, combinedCSS, 'utf8');
 
 console.log('✓ CSS compiled successfully!');

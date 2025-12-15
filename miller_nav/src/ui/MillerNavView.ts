@@ -89,6 +89,7 @@ export class MillerNavView extends ItemView {
         renderAllColumns: () => this.renderAllColumns(),
         toggleColumnCollapse: (i) => this.toggleColumnCollapse(i),
         collapseColumnTree: (i) => this.collapseColumnTree(i),
+        collapseAll: () => this.collapseAll(),
         closeColumnsFrom: (i) => this.closeColumnsFrom(i),
         createNote: (path) => this.createNote(path),
         createFolder: (path) => this.createFolder(path),
@@ -727,11 +728,30 @@ export class MillerNavView extends ItemView {
   }
 
   collapseAll(): void {
+    console.log('[MillerNav] collapseAll called', {
+      totalColumns: this.columns.length,
+      columnPaths: this.columns.map(c => c.folderPath)
+    });
+
+    // Collapse all tree folders
     for (const col of this.columns) {
       col.expandedFolders.clear();
     }
-    this.columns = [this.columns[0]];
+
+    // Collapse all secondary columns (keep them, but set isCollapsed = true)
+    for (let i = 1; i < this.columns.length; i++) {
+      this.columns[i].isCollapsed = true;
+      console.log('[MillerNav] Collapsed column', i, this.columns[i].folderPath);
+    }
+
+    // Keep column 0 expanded
+    this.columns[0].isCollapsed = false;
     this.columns[0].selectedItem = undefined;
+
+    console.log('[MillerNav] After collapse, column states:',
+      this.columns.map((c, i) => ({ index: i, path: c.folderPath, isCollapsed: c.isCollapsed }))
+    );
+
     this.renderAllColumns();
   }
 

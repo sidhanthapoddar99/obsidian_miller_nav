@@ -67,7 +67,7 @@ export function renderColumnHeader(options: ColumnHeaderOptions): void {
       parent: toolbarEl,
       icon: 'chevrons-down-up',
       ariaLabel: 'Collapse all',
-      onClick: () => callbacks.collapseColumnTree(columnIndex)
+      onClick: () => callbacks.collapseAll()
     });
   }
 

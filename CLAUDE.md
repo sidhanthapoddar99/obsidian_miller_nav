@@ -67,16 +67,38 @@ Refer to [docs/SRS.md](docs/SRS.md) for detailed requirements specification.
 cd miller_nav
 npm install       # Install dependencies
 npm run dev       # Start development build (watch mode)
-npm run build     # Production build
+npm run build     # Production build (builds to build/ folder)
+npm run build:css # Build CSS only (concatenates modular CSS files)
+npm run build:js  # Build JavaScript only (TypeScript + esbuild)
+npm run deploy    # Build and deploy to test vault (one command!)
 ```
+
+## Build Process
+
+The build system automatically:
+1. **Concatenates CSS**: Combines all modular CSS files from `styles/` into `styles/styles.css`
+2. **Type checks**: Runs TypeScript compiler for type validation
+3. **Bundles JavaScript**: Uses esbuild to bundle `src/**/*.ts` into `main.js`
+4. **Outputs to `build/`**: All build artifacts go to a clean `build/` directory
+
+**What gets built:**
+- `build/main.js` - Bundled JavaScript (~48KB)
+- `build/styles.css` - Concatenated CSS (~16KB)
+- `build/manifest.json` - Plugin manifest
 
 ## Installation for Testing
 
+**Quick method (recommended):**
+```bash
+cd miller_nav && npm run deploy
+```
+
+**Manual method:**
 1. Build the plugin: `cd miller_nav && npm run build`
-2. Copy `miller_nav/main.js`, `miller_nav/manifest.json`, and `miller_nav/styles/styles.css` to your test vault's `.obsidian/plugins/miller-nav/` folder
-3. Enable the plugin in Obsidian settings
-4. Reload Obsidian to see changes after rebuilding
-5. Location of the plugin foler is in @.env file under `OBSIDIAN_TEST_VAULT_PATH`
+2. Copy files from `build/` to your test vault's `.obsidian/plugins/miller-nav/` folder
+3. Reload Obsidian to see changes
+
+**Note:** The test vault path is configured in `.env` file under `OBSIDIAN_TEST_VAULT_PATH`
 
 # Updates
 

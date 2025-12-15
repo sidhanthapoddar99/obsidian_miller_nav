@@ -1,6 +1,7 @@
 # Build output
 main.js
 *.js.map
+build/
 
 # Dependencies
 node_modules/

@@ -37,6 +37,7 @@ export interface ViewCallbacks {
   renderAllColumns: () => Promise<void>;
   toggleColumnCollapse: (columnIndex: number) => void;
   collapseColumnTree: (columnIndex: number) => void;
+  collapseAll: () => void;
   closeColumnsFrom: (columnIndex: number) => void;
   createNote: (folderPath: string) => Promise<void>;
   createFolder: (folderPath: string) => Promise<void>;

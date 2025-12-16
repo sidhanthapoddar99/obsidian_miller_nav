@@ -425,7 +425,7 @@ rm -rf releases/version{VERSION}
 
 - The `releases/` directory is in `.gitignore` and won't be committed
 - Artifacts are only stored locally and on GitHub Releases
-- Tags use `v` prefix (e.g., v1.0.0) by convention
+- Tags are semantic(x,y,z) without prefix (e.g., 1.0.0) by convention
 - Always verify build output before creating release
 - GitHub releases are public once created
 

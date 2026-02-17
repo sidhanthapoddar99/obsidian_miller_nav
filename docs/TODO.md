@@ -5,17 +5,12 @@ Current Phase : 1
 
 
 ## Bugs
-
+- [ ] search button on top bar does not work
+- [ ] when creating a new file or folder additional sidebar is rendered like duplicate
 
 
 ### Context Menu Enhancements
-- [ ] Implement bulk delete for selected items
-- [ ] Implement bulk move for selected items
-- [ ] Add file/folder copy functionality (clipboard)
-- [ ] Add file/folder cut functionality (clipboard)
-- [ ] Implement folder duplication
-- [ ] Add file merge functionality
-- [ ] Implement search in folder
+
 
 
 ---
